@@ -4,3 +4,4 @@
 # Requisites
 - Python >= 3.7
 - Flask
+- PyMySQL
