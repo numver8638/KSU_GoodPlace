@@ -36,22 +36,16 @@
         <div class="right-bottom" id="notice"></div>
     </div>
 </div>
-<!-- <script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script> -->
+<script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script>
 <script>
-    // let CAMPUS_LAT = 35.9455298;
-    // let CAMPUS_LNG = 126.6854321;
+    let CAMPUS_LAT = 35.9455298;
+    let CAMPUS_LNG = 126.6854321;
 
-    // var options = {
-    //     center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
-    //     zoom: 17
-    // };
+    var options = {
+        center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
+        zoom: 17
+    };
 
-    // var map = new naver.maps.Map('map', options);
-
-    const NOTICE_TEMPLATE = "<div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">TEST_NOTICE<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button></div>";
-
-    $('#test_button').on('click', function() {
-        $('#notice').append(NOTICE_TEMPLATE);
-    });
+    var map = new naver.maps.Map('map', options);
 </script>
 {% endblock %}
