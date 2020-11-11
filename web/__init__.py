@@ -11,18 +11,16 @@ def create_app(test_config=None):
     else:
         app.config.from_mapping(test_config)
 
-    from .views import main_view, login_view, register_view
+    # Register views
+    from . import views
+    app.register_blueprint(views.bp)
 
-    app.register_blueprint(main_view.bp)
-    app.register_blueprint(login_view.bp)
-    app.register_blueprint(register_view.bp)
-
-    print(app.config['CLIENT_ID'])
-
-    @app.errorhandler(404)
+    @app.errorhandler(Exception)
     def error_handler(error):
-        return render_template('error.html', error_code=error.code, error_description=error.description)
-
+        if isinstance(error, HTTPException):
+            return render_template('error.html', error_code=error.code, error_description=error.description)
+        else:
+            return render_template('error.html', error_code=500, error_description='Internal Error')
     return app
 
 app = create_app()

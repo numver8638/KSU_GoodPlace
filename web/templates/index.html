@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 
+{% block title %}
+군산대 통합 장소 시스템
+{% endblock %}
+
 {% block content %}
-<script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script>
 <div id="main" style="position: relative;">
     <!-- 네이버 지도 background -->
     <div id="map" style="width: 100%; height: 100vh;"></div>
@@ -26,26 +29,29 @@
                         <button class="btn btn-outline-secondary" type="button">Search</button>
                     </div>
                 </div>
+                <button class="btn btn-primary" type="button" id="test_button">Add Notice</button>
             </div>
         </div>
-        <!-- 우측 하단 경고 메세지. 이부분은 차후에 오류시 알림을 띄우는 부분으로 활용할 거임. -->
-        <div class="alert alert-warning alert-dismissible fade show right-bottom" role="alert">
-            현재 위치 제공에 동의하지 않았습니다. 서비스 이용에 제한이 있을 수 있습니다.
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
+        <!-- 우측 하단 알림 바. 추후에 알림을 띄우는 부분으로 활용할 거임. -->
+        <div class="right-bottom" id="notice"></div>
     </div>
 </div>
+<!-- <script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script> -->
 <script>
-    let CAMPUS_LAT = 35.9455298;
-    let CAMPUS_LNG = 126.6854321;
+    // let CAMPUS_LAT = 35.9455298;
+    // let CAMPUS_LNG = 126.6854321;
 
-    var options = {
-        center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
-        zoom: 17
-    };
+    // var options = {
+    //     center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
+    //     zoom: 17
+    // };
 
-    var map = new naver.maps.Map('map', options);
+    // var map = new naver.maps.Map('map', options);
+
+    const NOTICE_TEMPLATE = "<div class=\"alert alert-warning alert-dismissible fade show\" role=\"alert\">TEST_NOTICE<button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button></div>";
+
+    $('#test_button').on('click', function() {
+        $('#notice').append(NOTICE_TEMPLATE);
+    });
 </script>
 {% endblock %}
