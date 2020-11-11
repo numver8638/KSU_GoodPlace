@@ -15,6 +15,21 @@
     position: absolute;
 }
 
+/* 오버레이용 style */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    pointer-events: none; /* 오버레이 자체는 이벤트 무시하게 함. */
+}
+
+/* 오버레이 위의 나머지 elements들은 이벤트를 받게 함 */
+.overlay > * {
+    pointer-events: initial;
+}
+
 /* Side menu for index.html */
 .menu {
     position: absolute;
