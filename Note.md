@@ -6,6 +6,7 @@
 Google Maps API는 사용료가 있어서 무료인 Naver Maps API를 사용하기로 했습니다.
 
 > 주의사항: Naver Maps API를 이용할 때 꼭 지켜야 하는 규약이 있으니 [여기](https://docs.ncloud.com/ko/naveropenapi_v3/maps/overview.html)를 참고하여 코딩시 준수해주시기 바랍니다.
+> Application ID는 본인 것을 발급받아 테스트 하시거나 신진환에게 문의주시면 Application ID를 알려드리겠습니다.
 
 ## Web Dynamic Map
 예제: [Naver Maps Javascript API](https://navermaps.github.io/maps.js.ncp/docs/tutorial-digest.example.html)

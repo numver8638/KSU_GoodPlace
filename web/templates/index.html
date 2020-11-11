@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script>
+<div id="main" style="position: relative;">
+    <!-- 네이버 지도 background -->
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <!-- 상단 UI Overlay -->
+    <div id="overlay" style="position: absolute !important; top: 0; left: 0; width: 100%; height: 100vh;">
+        <!-- 좌측 메인 메뉴 -->
+        <div class="card menu" id="menu">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">검색</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">추천</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body menu-content" id="menuBody">
+                <div class="input-group mb-3">
+                    <input type="text" placeholder="Search" aria-describedby="button-addon4">
+                    <div class="input-group-append" id="button-addon4">
+                        <button class="btn btn-outline-secondary" type="button">Search</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 우측 하단 경고 메세지. 이부분은 차후에 오류시 알림을 띄우는 부분으로 활용할 거임. -->
+        <div class="alert alert-warning alert-dismissible fade show right-bottom" role="alert">
+            현재 위치 제공에 동의하지 않았습니다. 서비스 이용에 제한이 있을 수 있습니다.
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+    let CAMPUS_LAT = 35.9455298;
+    let CAMPUS_LNG = 126.6854321;
+
+    var options = {
+        center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
+        zoom: 17
+    };
+
+    var map = new naver.maps.Map('map', options);
+</script>
+{% endblock %}

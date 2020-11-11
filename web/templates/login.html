@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card mx-auto text-center" style="max-width: 500px; margin-top: 120px;">
+    <div class="card-header">
+        <h3>Login</h3>
+    </div>
+    <div class="card-body">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
+        </div>
+        <div class="input-group mb-3">
+            <input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1">
+        </div>
+        <div class="input-group mb-3">
+            <a role="button" class="btn btn-link" href="{{ url_for('register_view.register') }}">Register</a>
+            <a role="button" class="btn btn-primary" href="#">Login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

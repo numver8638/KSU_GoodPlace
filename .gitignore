@@ -227,4 +227,6 @@ pip-selfcheck.json
 !.vscode/extensions.json
 *.code-workspace
 
+config.json
+
 # End of https://www.toptal.com/developers/gitignore/api/flask,python,venv,vscode
