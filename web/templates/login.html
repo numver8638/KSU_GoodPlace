@@ -1,25 +1,103 @@
-{% extends 'base.html' %}
+{% extends 'layout/base.html' %}
 
 {% block title %}
 군산대 통합 장소 시스템 - 로그인
 {% endblock %}
 
 {% block content %}
-<div class="card mx-auto text-center" style="max-width: 500px; margin-top: 120px;">
+<div class="card mx-auto" style="max-width: 500px; margin-top: 120px;">
     <div class="card-header">
         <h3>Login</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body" id="login_form">
         <div class="input-group mb-3">
-            <input type="text" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
+            <input id="id" type="text" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
+            <div class="invalid-feedback">
+                아이디를 입력해주세요.
+            </div>
         </div>
         <div class="input-group mb-3">
-            <input type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1">
+            <input id="pw" type="password" class="form-control" placeholder="Password" aria-label="Password" aria-describedby="basic-addon1">
+            <div class="invalid-feedback">
+                비밀번호를 입력해주세요.
+            </div>
         </div>
-        <div class="input-group mb-3">
+        <div class="input-group mb-3 justify-content-end" id="login_button_group">
             <a role="button" class="btn btn-link" href="{{ url_for('views.register') }}">Register</a>
-            <a role="button" class="btn btn-primary" href="#">Login</a>
+            <button class="btn btn-primary" id="login_button">Login</a>
         </div>
+        <div class="invalid-feedback" id="login_message"></div>
+        <noscript>
+            <div class="alert alert-primary show" role="alert">
+                Javascript가 비활성화 되어있습니다. 비활성화시 로그인이 불가능합니다. Javascript를 활성화 해주세요.
+            </div>
+        </noscript>
     </div>
 </div>
+<script src="{{ url_for('static', filename='sha256.min.js') }}"></script>
+<script src="{{ url_for('static', filename='jsencrypt.min.js') }}"></script>
+<script>
+    function getRandomId() {
+        var array = new Uint8Array(16);
+        window.crypto.getRandomValues(array);
+    
+        var str = "";
+
+        array.forEach(e => {
+            str += e < 16 ? ("0" + e.toString(16)) : e.toString(16); 
+        });
+
+        return str;
+    }
+
+    $("#login_button").on('click', function() {
+        let id = $("#id").val();
+        let pw = $("#pw").val();
+
+        let error_handler = function(xhr, status) {
+            let msg_table = {
+                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
+                403: '아이디 혹은 비밀번호가 일치하지 않습니다.',
+                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+            }
+            $('#login_message').text(msg_table[xhr.status]);
+            $('#login_button_group').addClass('is-invalid');
+        };
+
+        // Reset invalid-feedbacks
+        (id.length == 0) ? $('#id').addClass('is-invalid') : $('#id').removeClass('is-invalid');
+        (pw.length == 0) ? $('#pw').addClass('is-invalid') : $('#pw').removeClass('is-invalid');
+        $('#login_button_group').removeClass('is-invalid');
+
+        if (id.length != 0 && pw.length != 0) {
+            let request_id = getRandomId();
+            // 서버에서 먼저 토큰을 발급 받고 로그인을 시작.
+            $.getJSON('/api/auth/login', { request_id: request_id }, function (data) {
+                let request_data = {
+                    'request_id': request_id,
+                    'user_id': id,
+                    'user_pw': sha256(pw)
+                };
+
+                let crypt = new JSEncrypt();
+                crypt.setKey(data['key']);
+
+                let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
+
+                $.ajax('/api/auth/login', {
+                    method: 'POST',
+                    dataType: 'JSON',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 'data': encrypted_data, 'token': data['token'] }),
+                    success: function(data, status, xhr) {
+                        window.sessionStorage.setItem('__USER_ID', data['user_id']);
+                        window.sessionStorage.setItem('__USER_TOKEN', data['token']);
+                        window.location.assign("{{ url_for('views.index') }}");
+                    },
+                    error: error_handler
+                });
+            }).fail(error_handler);
+        }
+    });
+</script>
 {% endblock %}

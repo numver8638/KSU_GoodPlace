@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'layout/base.html' %}
 
 {% block title %}
 군산대 통합 장소 시스템
@@ -13,23 +13,56 @@
         <!-- 좌측 메인 메뉴 -->
         <div class="card menu" id="menu">
             <div class="card-header">
-                <ul class="nav nav-tabs card-header-tabs">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#">검색</a>
+                        <a class="nav-link active" id="search-tab" data-toggle="tab" href="#search" role="tab" aria-controls="search" aria-selected="true">검색</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">추천</a>
+                        <a class="nav-link" id="recommend-tab" data-toggle="tab" href="#recommend" role="tab" aria-controls="recommend" aria-selected="false">추천</a>
                     </li>
                 </ul>
             </div>
-            <div class="card-body menu-content" id="menuBody">
-                <div class="input-group mb-3">
-                    <input type="text" placeholder="Search" aria-describedby="button-addon4">
-                    <div class="input-group-append" id="button-addon4">
-                        <button class="btn btn-outline-secondary" type="button">Search</button>
+            <div class="card-body tab-content menu-content" id="menuBody">
+                <div class="tab-pane fade show active" id="search" role="tabpanel" aria-labelledby="search-tab">
+                    <div class="input-group mb-3">
+                        <input class="form-control" type="text" placeholder="Search" aria-describedby="search-button">
+                        <div class="input-group-append" id="search-button">
+                            <button class="btn btn-outline-secondary" type="button">Search</button>
+                        </div>
                     </div>
                 </div>
-                <button class="btn btn-primary" type="button" id="test_button">Add Notice</button>
+                <div class="tab-pane fade" id="recommend" role="tabpanel" aria-labelledby="recommend-tab">
+                    <div class="d-flex flex-column mb-3">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4 class="card-title">Title</h4>
+                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
+                                <p class="card-text">Content</p>
+                            </div>
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4 class="card-title">Title</h4>
+                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
+                                <p class="card-text">Content</p>
+                            </div>
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4 class="card-title">Title</h4>
+                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
+                                <p class="card-text">Content</p>
+                            </div>
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h4 class="card-title">Title</h4>
+                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
+                                <p class="card-text">Content</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- 우측 하단 알림 바. 추후에 알림을 띄우는 부분으로 활용할 거임. -->
@@ -38,14 +71,20 @@
 </div>
 <script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script>
 <script>
-    let CAMPUS_LAT = 35.9455298;
-    let CAMPUS_LNG = 126.6854321;
+    $(function() {
+        // 네이버 지도 로드. 중심은 군산대학교 정문으로.
+        let CAMPUS_LAT = 35.9455298;
+        let CAMPUS_LNG = 126.6854321;
 
-    var options = {
-        center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
-        zoom: 17
-    };
+        var options = {
+            center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
+            zoom: 17
+        };
 
-    var map = new naver.maps.Map('map', options);
+        var map = new naver.maps.Map('map', options);
+
+        // 지도 로드된 영역 안에 있는 장소 좌표 목록을 로드해서 화면에 찍어주기.
+        // TODO: 구현.
+    });
 </script>
 {% endblock %}
