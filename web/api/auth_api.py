@@ -277,7 +277,14 @@ class LoginAPI(Resource):
         except InvalidCredential:
             raise Forbidden('Unknown user or id/pw mismatch.')
         else:
-            return { 'message': 'Success', 'user_id': user.id, 'token': user.to_token() }
+            token = user.to_token()
+
+            # 웹과 API를 모두 지원하기 위해 JSON과 쿠키를 동시에 전송.
+            response = jsonify(message='Success', user_id=user.uid, token=token)
+            response.set_cookie('__USER_TOKEN', token, httponly=True)
+            response.set_cooke('__USER_ID', user.uid)
+
+            return response
 
 
 @api.route('/logout')
