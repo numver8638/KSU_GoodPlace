@@ -203,7 +203,7 @@ class RegisterAPI(Resource):
         # Verified area
         try:
             User.create_new_user(
-                data['user_id'], data['user_pw'], data['user_name'], data['user_nickname'], data['user_profile_url']
+                data['user_id'], data['user_pw'], data['user_name'], data['user_nickname'], data['user_profile']
             )
         except KeyError:
             raise BadRequest('Omitted required data.')
