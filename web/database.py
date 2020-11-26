@@ -63,7 +63,7 @@ def create_user(id, pw, name, nickname, profile_url, perms):
     """
     새로운 사용자를 생성하는 쿼리.
     """
-    QUERY = "INSERT INTO UserTable VALUES (%s,%s,%s,%s,%s,%s,%s);"
+    QUERY = "INSERT INTO UserTable(UserID,UserUID,UserPw,UserName,UserNickname,UserProfile,UserPermissions) VALUES (%s,%s,%s,%s,%s,%s,%s);"
 
     pwhash = generate_password_hash(pw, method='pbkdf2:sha256:10000', salt_length=16)
     uid = gen_salt(12)
@@ -86,7 +86,7 @@ def update_user(id, name, nickname, profile_url, perms):
 def verify_credential(id, pw):
     QUERY = "SELECT UserPw FROM UserTable WHERE UserID=%s;"
 
-    pwhash: str
+    hashpw: str
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, id)
@@ -98,7 +98,7 @@ def verify_credential(id, pw):
         else:
             hashpw = result['UserPw']
     
-    return False if pwhash is None else check_password_hash(pwhash, pw)
+    return False if hashpw is None else check_password_hash(hashpw, pw)
 
 
 def update_credential(id, old_pw, new_pw):

@@ -284,6 +284,7 @@ class User:
             return token[7:] if token.startswith('Bearer ') else None
         elif '__USER_TOKEN' in request.cookies:
             token = request.cookies['__USER_TOKEN']
+            return token
         else:
             return None
     
@@ -317,11 +318,11 @@ class User:
         이미 있는 유저인 경우 `UserIDConflict` 예외가 발생.
         """
 
-        if not database.is_used_id(id):
+        if database.is_used_id(id):
             raise UserIDConflict("User ID '%s' is already in use." % id)
 
         if profile is None or not resources_api.is_valid_url(profile):
-            profile = url_for('static', filename='default_user.png')
+            profile = url_for('static', filename='images/default_user.svg')
 
         perms: set
         if is_admin:
