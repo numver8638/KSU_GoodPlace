@@ -11,7 +11,9 @@ bp = Blueprint('views', __name__, url_prefix='/')
 
 @bp.route('/')
 def index():
-    return render_template('index.html')
+    user = User.get_current_user()
+
+    return render_template('index.html', user=user)
 
 
 @bp.route('/login')
@@ -21,8 +23,18 @@ def login():
     if user.is_annonymous():
         return render_template('login.html')
     else:
-        return render_template('info.html', message='')
+        return render_template('info.html', message='Already logged in.')
 
+@bp.route('/logout')
+def logout():
+    # 메인 화면으로 리디렉트
+    response = redirect(url_for('views.index'))
+
+    # 쿠키 무효화
+    response.set_cookie('__USER_TOKEN', '', max_age=0)
+    response.set_cookie('__USER_ID', '', max_age=0)
+
+    return response
 
 @bp.route('/register')
 def register():
@@ -31,16 +43,16 @@ def register():
     if user.is_annonymous():
         return render_template('register.html')
     else:
-        return render_template('info.html', message='')
+        return render_template('info.html', message='Cannot register in login state.')
 
 
-@bp.route('/users/<user_id>')
+@bp.route('/user')
 @required_login
-def user(user, user_id):
-    return render_template('user.html')
+def user(user):
+    return render_template('user.html', user=user)
 
 
 @bp.route('/admin')
 @required_login('admin')
 def admin(user):
-    return render_template('admin.html')
+    return render_template('admin.html', user=user)

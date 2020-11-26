@@ -1,0 +1,13 @@
+
+.menu {
+    position: absolute;
+    top: 100px;
+    left: 0px;
+    margin-left: 50px;
+    width: 500px;
+    height: 70vh;
+
+    .menu-content {
+        overflow: scroll;
+    }
+}

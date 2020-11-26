@@ -1,0 +1,16 @@
+// Disable boostrap's responsive navbar
+.navbar-expand-always {
+    -ms-flex-flow: row nowrap;
+    flex-flow: row nowrap;
+    -ms-flex-pack: start;
+    justify-content: flex-start;
+
+    .navbar-nav {
+        -ms-flex-direction: row;
+        flex-direction: row;
+
+        .dropdown-menu {
+            position: absolute;
+        }
+    }
+}

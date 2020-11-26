@@ -1,3 +1,4 @@
+{% set without_login = true %}
 {% extends 'layout/base.html' %}
 
 {% block title %}
@@ -10,43 +11,130 @@
         <h2>Register</h2>
     </div>
     <div class="card-body">
-        <div>
-            <div class="form-group">
-                <label for="userID">ID</label>
-                <input type="text" class="form-control" id="userID" aria-describedby="emailHelp">
-                <div class="invaild-feedback">
-                    이미 사용중인 아이디입니다.
-                </div>
+        <div class="form-group mb-3">
+            <label for="id">ID</label>
+            <input type="text" class="form-control" id="id" aria-describedby="emailHelp">
+            <div class="invalid-feedback">
+                이미 사용중인 아이디입니다.
             </div>
-            <div class="form-group">
-                <label for="userName">Name</label>
-                <input type="text" class="form-control" id="userName" aria-describedby="emailHelp">
+            <div class="valid-feedback">
+                사용 가능한 아이디입니다.
             </div>
-            <div class="form-group">
-                <label for="userNickname">Nickname</label>
-                <input type="text" class="form-control" id="userNickname" aria-describedby="emailHelp">
-            </div>
-            <div class="form-group">
-                <label for="userEmail">Email address</label>  
-                <input type="email" class="form-control" id="userEmail" aria-describedby="emailHelp">
-                <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
-            </div>
-            <div class="form-group">
-                <label for="userPassword">Password</label>
-                <input type="password" class="form-control" id="userPassword">
-            </div>
-            <div class="form-group">
-                <label for="userPasswordCheck">Password Check</label>
-                <input type="password" class="form-control" id="userPasswordCheck">
-            </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </div>
         </div>
+        <div class="form-group mb-3">
+            <label for="name">Name</label>
+            <input type="text" class="form-control" id="name" aria-describedby="emailHelp">
+        </div>
+        <div class="form-group mb-3">
+            <label for="nickname">Nickname</label>
+            <input type="text" class="form-control" id="nickname" aria-describedby="emailHelp">
+        </div>
+        <div class="form-group mb-3">
+            <label for="password">Password</label>
+            <input type="password" class="form-control" id="password">
+        </div>
+        <div class="form-group mb-3">
+            <label for="password_check">Password Check</label>
+            <input type="password" class="form-control" id="password_check">
+            <div class="invalid-feedback">
+                비밀번호가 일치하지 않습니다.
+            </div>
+        </div>
+        <div class="form-group mb-3 justify-content-end">
+            <button class="btn btn-primary" id="register_button">Register</button>
+        </div>
+        <div class="invalid-feedback" id="register_message"></div>
+        <noscript>
+            <div class="alert alert-primary show" role="alert">
+                Javascript가 비활성화 되어있습니다. 비활성화시 회원가입이 불가능합니다. Javascript를 활성화 해주세요.
+            </div>
+        </noscript>
     </div>
 </div>
+<script src="{{ url_for('static', filename='utils.js') }}"></script>
+<script src="{{ url_for('static', filename='sha256.min.js') }}"></script>
+<script src="{{ url_for('static', filename='jsencrypt.min.js') }}"></script>
 <script>
-    $(function() {
+    $("#id").on("change", function() {
+        let id = $("#id").val();
 
+        // Reset invalid-feedback
+        $("#id").removeClass("is-invalid is-valid");
+
+        $.getJSON("/api/auth/check_id/" + id, function(data) {
+            let conflict = data['conflict'];
+
+            if (typeof(conflict) === "boolean") {
+                $("#id").addClass(conflict ? "is-invalid" : "is-valid");
+
+                $("#id").data("valid", !conflict);
+            }
+        });
     });
+
+    $("#password_check").on("change", function() {
+        let pw = $("#password").val();
+        let pw_check = $("#password_check").val();
+
+        (pw === pw_check) ? $("#password_check").removeClass("is-invalid") : $("#password_check").addClass("is-invalid");
+    });
+
+    $("#register_button").on("click", function() {
+        let id = $("#id").val();
+        let id_valid = $("#id").data("valid");
+        let name = $("#name").val();
+        let nickname = $("#nickname").val();
+        let pw = $("#password").val();
+        let pw_check = $("#password_check").val();
+
+        let error_handler = function(xhr, status) {
+            let msg_table = {
+                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
+                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+            };
+            $('#register_message').text(msg_table[xhr.status]);
+        };
+
+        let request_id = ksu_goodplace.generate_id();
+
+        if (!id_valid) {
+            $("#id").focus();
+            return;
+        }
+
+        if (pw !== pw_check) {
+            $("#password_check").focus();
+            return;
+        }
+
+        $.getJSON("/api/auth/register", { request_id: request_id }, function(data) {
+            let request_data = {
+                "request_id": request_id,
+                "user_id": id,
+                "user_pw": sha256(pw),
+                "user_name": name,
+                "user_nickname": nickname,
+                "user_profile": null
+            };
+
+            let crypt = new JSEncrypt();
+            crypt.setKey(data['key']);
+
+            let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
+
+            $.ajax("/api/auth/register", {
+                method: "POST",
+                dataType: "JSON",
+                contentType: "application/json",
+                data: JSON.stringify({ data: encrypted_data, token: data["token"] }),
+                success: function(data, status, xhr) {
+                    alert("회원 가입이 완료되었습니다.");
+
+                    window.location.assign("{{ url_for('views.index') }}");
+                },
+                error: error_handler
+            });
+        })
+    })
 </script>
 {% endblock %}
