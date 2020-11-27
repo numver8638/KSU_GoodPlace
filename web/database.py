@@ -74,13 +74,13 @@ def create_user(id, pw, name, nickname, profile_url, perms):
         cursor.execute(QUERY, (id, uid, pwhash, name, nickname, profile_url, serialzed_perms))
 
 
-def update_user(id, name, nickname, profile_url, perms):
-    QUERY = "UPDATE UserTable SET UserName=%s, UserNickname=%s, UserProfile=%s, UserPermissions=%s WHERE UserID=%s;"
+def update_user(id, nickname, profile_url, perms, token_id):
+    QUERY = "UPDATE UserTable SET UserNickname=%s, UserProfile=%s, UserPermissions=%s, TokenID=%s WHERE UserID=%s;"
     
     serialized_perms = user.serialize_permissions(perms)
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, (name, nickname, profile_url, serialized_perms, id))
+        cursor.execute(QUERY, (nickname, profile_url, serialized_perms, token_id, id))
 
 
 def verify_credential(id, pw):
@@ -153,7 +153,8 @@ def query_user_by_uid(uid):
                 'name': result['UserName'],
                 'nickname': result['UserNickname'],
                 'profile_url': result['UserProfile'],
-                'perms': user.deserialize_permissions(result['UserPermissions'])
+                'perms': user.deserialize_permissions(result['UserPermissions']),
+                'token_id' : result['TokenID']
             }
 
 

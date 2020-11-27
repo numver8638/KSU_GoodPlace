@@ -5,8 +5,9 @@
 import base64
 import functools
 
-from Crypto.Hash import BLAKE2s
+from Crypto import Random
 from Crypto.Cipher import AES
+from Crypto.Hash import BLAKE2s
 from Crypto.Util.Padding import pad, unpad
 from flask import redirect, url_for, request, current_app
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -116,10 +117,10 @@ class User:
     """
 
     def __sync_data(self):
-        database.update_user(self.id, self.name, self.nickname, self.profile_url, self.__perms)
+        database.update_user(self.id, self.nickname, self.profile_url, self.__perms, self.__token_id)
 
 
-    def __init__(self, id, uid, name, nickname, perms, profile_url):
+    def __init__(self, id, uid, name, nickname, perms, profile_url, token_id):
         """
         `User` 클래스의 생성자. 직접 이용하지 말 것.
         필요시 `create_new_user()`, `from_id_pw()`, `from_token()`, `from_uid()` 정적 메서드를 이용할 것.
@@ -130,6 +131,7 @@ class User:
         self.__nickname = nickname
         self.__perms = set(perms)
         self.__profile_url = profile_url
+        self.__token_id = token_id
 
 
     @property
@@ -198,6 +200,21 @@ class User:
         """
         return list(self.__perms)
 
+    
+    @property
+    def token_id(self):
+        """
+        현재 발급된 토큰의 고유 번호.
+        """
+        return self.__token_id
+    
+
+    @token_id.setter
+    def token_id(self, value):
+        self.__token_id = value
+
+        self.__sync_data()
+
 
     def check_password(self, pw):
         """
@@ -264,8 +281,6 @@ class User:
     def delete(self):
         """
         유저를 삭제.
-
-        XXX: 유저를 삭제해도 이미 발급된 토큰은 유저가 삭제하지 않는 한 계속 남아있음. 이를 무효화 할 방법을 찾아야 함.
         """
         database.delete_user(self.id)
 
@@ -293,13 +308,11 @@ class User:
         """
         `User` 객체로 부터 인증 토큰을 생성.
         """
+        assert self.token_id is not None
+
         payload = {
-            'user_id': self.id,
             'user_uid': self.uid,
-            'user_nickname': self.nickname,
-            'user_name': self.name,
-            'user_profile': self.profile_url,
-            'permissions': list(self.__perms)
+            'token_id': self.token_id
         }
 
         token = jwt.encode(payload, current_app.config['TOKEN_SECRET_KEY'])
@@ -317,7 +330,6 @@ class User:
 
         이미 있는 유저인 경우 `UserIDConflict` 예외가 발생.
         """
-
         if database.is_used_id(id):
             raise UserIDConflict("User ID '%s' is already in use." % id)
 
@@ -345,20 +357,32 @@ class User:
         if user_data is None:
             raise InvalidCredential()
         else:
-            return User(id, user_data['uid'], user_data['name'], user_data['nickname'], user_data['perms'], user_data['profile_url'])
+            # generate random id for token.
+            rand = Random.new().read(16)
+            token_id = "".join([ "{0:02x}".format(b) for b in rand ])
 
+            user = User(id, user_data['uid'], user_data['name'], user_data['nickname'], user_data['perms'], user_data['profile_url'], token_id)
+
+            user.__sync_data()
+
+            return user
 
     @staticmethod
     def from_token(token:str):
         """
         인증 토큰으로부터 `User` 객체를 생성.
         """
-        cipher = _generate_cipher()
+        try:
+            cipher = _generate_cipher()
 
-        decrypted_token = unpad(cipher.decrypt(base64.b64decode(token.encode('utf-8'))), AES.block_size).decode('utf-8')
-        data = jwt.decode(decrypted_token, current_app.config['TOKEN_SECRET_KEY'])
+            decrypted_token = unpad(cipher.decrypt(base64.b64decode(token.encode('utf-8'))), AES.block_size).decode('utf-8')
+            data = jwt.decode(decrypted_token, current_app.config['TOKEN_SECRET_KEY'])
 
-        return User(data['user_id'], data['user_uid'], data['user_name'], data['user_nickname'], data['permissions'], data['user_profile'])
+            user = User.from_uid(data['user_uid'])
+
+            return user if user.token_id == data['token_id'] else AnnonymousUser()
+        except (ValueError, KeyError):
+            return AnnonymousUser()
 
 
     @staticmethod
@@ -369,9 +393,9 @@ class User:
         user_data = database.query_user_by_uid(uid)
 
         if user_data is None:
-            return None
+            return AnnonymousUser()
         else:
-            return User(user_data['id'], uid, user_data['name'], user_data['nickname'], user_data['perms'], user_data['profile_url'])
+            return User(user_data['id'], uid, user_data['name'], user_data['nickname'], user_data['perms'], user_data['profile_url'], user_data['token_id'])
 
 
     @staticmethod
@@ -394,7 +418,7 @@ class AnnonymousUser(User):
     자세한 사항은 `User` 클래스 참조.
     """
     def __init__(self):
-        super().__init__(None,'ANNO_USER',None,None,[],None)
+        super().__init__(None,'ANNO_USER',None,None,[],None,None)
 
 
     @property
@@ -421,6 +445,16 @@ class AnnonymousUser(User):
         raise NotImplementedError('Cannot change nickname of AnnonymousUser.')
 
     
+    @property
+    def token_id(self):
+        return '<NEVER_VALID>'
+    
+
+    @token_id.setter
+    def token_id(self, value):
+        raise NotImplementedError('Cannot set token id of AnnonymousUser.')
+
+
     def check_password(self, pw):
         raise NotImplementedError('Cannot check password of AnnonymousUser.')
 
@@ -440,6 +474,7 @@ class AnnonymousUser(User):
     def has_permission(self, permission):
         # Always false when user is annonymous.
         return False
+
 
     def is_annonymous(self):
         return True

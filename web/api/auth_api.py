@@ -282,7 +282,7 @@ class LoginAPI(Resource):
             # 웹과 API를 모두 지원하기 위해 JSON과 쿠키를 동시에 전송.
             response = jsonify(message='Success', user_id=user.uid, token=token)
             response.set_cookie('__USER_TOKEN', token, httponly=True)
-            response.set_cooke('__USER_ID', user.uid)
+            response.set_cookie('__USER_ID', user.uid)
 
             return response
 
@@ -305,14 +305,18 @@ class LogoutAPI(Resource):
         <uid>가 생략된 경우 로그인한 본인이, 생략되지 않은 경우 지정된 유저가 로그아웃.
         <uid>가 로그인한 유저와 다른 유저 고유 번호일 경우 상기한 권한을 요구함.
 
-        TODO: 토큰 특성상 한번 발급하면 로그아웃 하기가 어려움. 토큰을 무효화 하는 방법 필요.
+        토큰 고유 번호를 리셋시켜 다른 토큰들을 무효화시킴.
         """
         if uid is None or user.uid == uid:
-            # Process logout
-            pass
+            user.token_id = None
         elif user.has_permission('admin.auth.logout'):
             # Process force logout
-            pass
+            target_user = User.from_uid(uid)
+
+            if target_user.is_annonymous():
+                raise NotFound("User UID %s is not found." % uid)
+            else:
+                target_user.token_id = None
         else:
             raise Forbidden('Operation not permitted.')
 

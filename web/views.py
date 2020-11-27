@@ -27,6 +27,12 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    user = User.get_current_user()
+
+    # Invalidate token id.
+    if not user.is_annonymous():
+        user.token_id = None
+
     # 메인 화면으로 리디렉트
     response = redirect(url_for('views.index'))
 

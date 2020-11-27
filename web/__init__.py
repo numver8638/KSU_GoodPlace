@@ -52,7 +52,7 @@ def create_app(test_config=None):
 
             return response
         else:
-            return render_template('error.html', error_code=code, error_description=_(code)), code
+            return render_template('error.html', error_code=code, error_description=desc), code
 
     @app.teardown_appcontext
     def destory_db(error):

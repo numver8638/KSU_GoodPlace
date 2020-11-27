@@ -153,6 +153,7 @@ def main():
                 UserNickname VARCHAR(32) NOT NULL,
                 UserProfile VARCHAR(128) NULL,
                 UserPermissions VARCHAR(1024) NULL,
+                TokenID CHAR(32) NULL,
 
                 PRIMARY KEY (UserID, UserUID)
             );
