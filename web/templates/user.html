@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'layout/base.html' %}
 
 {% block title %}
 군산대 통합 장소 시스템 - {{ user.nickname }}
@@ -6,20 +6,247 @@
 
 {% block content %}
 <div class="container" style="margin-top: 120px;">
-    <div class="input-group">
-        <div class="custom-file">
-            <input type="file" class="custom-file-input" id="profileImage">
-            <label class="custom-file-label" for="profileImage">Choose file...</label>
+    <div class="card">
+        <div class="card-header">
+            <h2>Setting</h2>
         </div>
-        <div class="input-group-append">
-            <button class="btn btn-outline-primary" id="profileImageUpload">Upload</button>
+        <div class="card-body">
+            <div class="d-flex justify-content-start">
+                <img class="border rounded-circle" width="100" height="100" src="{{ user.profile_url }}" id="profile">
+                <div class="flex-fill ml-2">
+                    <label for="profileImage">Profile Image</label>
+                    <div class="input-group">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" id="profile_image" accept="image/png,image/jpeg">
+                            <label class="custom-file-label" for="profile_image">Choose file...</label>
+                        </div>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-primary" id="upload_profile_image">Upload</button>
+                        </div>
+                    </div>
+                    <div class="invalid-feedback">
+                        파일을 선택해 주세요.
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <label for="nickname">Change Nickname</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="nickname" placeholder="{{ user.nickname }}">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-primary" type="button" id="apply_nickname">Apply</button>
+                </div>
+            </div>
+            <hr>
+            <label for="change_password">Change Password</label>
+            <div class="input-group">
+                <button class="btn btn-primary" data-toggle="modal" data-target="#password_change_modal">Change</button>
+            </div>
         </div>
-    </div>
-    <div class="invalid-feedback">
-        파일을 선택해 주세요.
     </div>
 </div>
-<div class="modal">
+<div class="overlay">
+    <!-- 알림 창으로 이용 -->
+    <div class="right-bottom" id="notice"></div>
+</div>
+<div class="modal fade" tabindex="-1" id="password_change_modal" aria-labelledby="" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Change Password</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label for="password">Current Password</label>
+                    <input type="password" class="form-control" id="current_password">
+                    <div class="invalid-feedback">
+                        비밀번호를 입력해주세요.
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="password">New Password</label>
+                    <input type="password" class="form-control" id="new_password">
+                    <div class="invalid-feedback">
+                        비밀번호를 입력해주세요.
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="password_check">New Password Check</label>
+                    <input type="password" class="form-control" id="new_password_check">
+                    <div class="invalid-feedback">
+                        비밀번호가 일치하지 않습니다.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-end">
+                <button class="btn btn-primary" id="change_password">Change</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='utils.js') }}"></script>
+<script src="{{ url_for('static', filename='sha256.min.js') }}"></script>
+<script src="{{ url_for('static', filename='jsencrypt.min.js') }}"></script>
+<script>
+    // 프로파일 사진 업로드 이벤트 처리
+    $("#upload_profile_image").on("click", function() {
+        let error_handler = function() {
+            let msg_table = {
+                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
+                401: '현재 로그인이 유효하지 않습니다. 다시 로그인해주세요.',
+                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+            };
+        
+            ksu_goodplace.notify("warning", "프로필 사진 업로드에 실패했습니다 - " + msg_table[xhr.status]);
+        };
+
+        var data = new FormData();
+        let file = $("#profile_image")[0].files[0];
+
+        // 파일 선택했는지 체크.
+        if (file === undefined) {
+            ksu_goodplace.notify("warning", "이미지 파일을 선택해주세요.");
+            return;
+        }
+
+        data.set("file", file);
+
+        // 파일 업로드
+        $.ajax({
+            url: "/api/resources/upload",
+            method: "POST",
+            dataType: "JSON",
+            data: data,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                let user_uid = ksu_goodplace.get_cookie("__USER_ID");
+
+                // 성공했으면 유저 프로파일 등록
+                $.ajax({
+                    url: "/api/users/" + user_uid,
+                    method: "PUT",
+                    contentType: "application/json",
+                    data: JSON.stringify({ user_profile: data['url'] }),
+                    success: function() {
+                        ksu_goodplace.notify("success", "프로필 사진 업로드에 성공했습니다.");
+                        $("#profile").attr("src", data['url']);
+                    },
+                    fail: error_handler
+                });
+            },
+            fail: error_handler
+        });
+    });
+
+    // 별명 수정시 이벤트 처리
+    $("#apply_nickname").on("click", function() {
+        let error_handler = function() {
+            let msg_table = {
+                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
+                401: '현재 로그인이 유효하지 않습니다. 다시 로그인해주세요.',
+                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+            };
+        
+            ksu_goodplace.notify("warning", "닉네임 변경에 실패했습니다 - " + msg_table[xhr.status]);
+        };
+        let nickname = $("#nickname").val();
+        let user_uid = ksu_goodplace.get_cookie("__USER_ID");
+
+        if (nickname.length == 0) {
+            ksu_goodplace.notify("warning", "닉네임을 입력해주세요.");
+            return;
+        }
+
+        // 유저 프로파일 등록
+        $.ajax({
+            url: "/api/users/" + user_uid,
+            method: "PUT",
+            contentType: "application/json",
+            data: JSON.stringify({ user_nickname: nickname }),
+            success: function() {
+                ksu_goodplace.notify("success", "닉네임 변경에 성공했습니다.");
+                $("#profile").attr("src", data['url']);
+            },
+            fail: error_handler
+        });
+    });
+
+    // 새로운 비밀번호 입력할 때 같은지 확인.
+    $("#new_password_check").on("change", function() {
+        let pw = $("#new_password").val();
+        let pw_check = $("#new_password_check").val();
+
+        (pw === pw_check) ? $("#new_password_check").removeClass("is-invalid") : $("#new_password_check").addClass("is-invalid");
     
-</div>
+    });
+
+    // 비밀번호 변경 버튼 누를 때 이벤트 처리.
+    $("#change_password").on("click", function() {
+        let current_pw = $("#current_password").val();
+        let new_pw = $("#new_password").val();
+        let new_pw_check = $("#new_password_check").val();
+
+        // Reset is-invalid
+        $("#current_password").removeClass("is-invalid");
+        $("#new_password").removeClass("is-invalid");
+        $("#new_password_check").removeClass("is-invalid");
+
+        if (current_pw.length == 0) {
+            $("#current_password").addClass("is-invalid");
+            return;
+        }
+
+        if (new_pw.length == 0) {
+            $("#new_password").addClass("is-invalid");
+            return;
+        }
+
+        if (new_pw !== new_pw_check) {
+            $("#new_password_check").addClass("is-invalid");
+            return;
+        }
+
+        let error_handler = function(xhr, status) {
+            let msg_table = {
+                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
+                403: '현재 비밀번호가 일치하지 않습니다.',
+                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+            };
+            
+            ksu_goodplace.notify("warning", "비밀번호 변경에 실패했습니다 - " + msg_table[xhr.status]);
+            $("#password_change_modal").modal("hide");
+        };
+
+        let request_id = ksu_goodplace.generate_id();
+
+        $.getJSON("/api/auth/update_password", { request_id: request_id }, function(data) {
+            let request_data = {
+                'request_id': request_id,
+                'old_pw': sha256(current_pw),
+                'new_pw': sha256(new_pw)
+            };
+
+            let crypt = new JSEncrypt();
+            crypt.setKey(data['key']);
+
+            let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
+
+            $.ajax('/api/auth/update_password', {
+                method: 'POST',
+                dataType: 'JSON',
+                contentType: 'application/json',
+                data: JSON.stringify({ 'data': encrypted_data, 'token': data['token'] }),
+                success: function(data, status, xhr) {
+                    ksu_goodplace.notify("success", "비밀번호 변경이 완료되었습니다.");
+                    $("#password_change_modal").modal("hide");
+                },
+                error: error_handler
+            });
+        }).fail(error_handler);
+    });
+</script>
 {% endblock %}
