@@ -1,0 +1,18 @@
+# Template for configuration.
+
+<VirtualHost *:80>
+    ServerName <ServerName>
+
+    WSGIDaemonProcess <ServerName> maximum-requests=10000 python-home=<WebRoot>/venv python-path=/WebRoot
+    WSGIScriptAlias / <WebRoot>/wsgi.py
+    WSGIProcessGroup <ServerName>
+    WSGIApplicationGroup %{GLOBAL}
+
+    <Directory <WebRoot>>
+        <Files "wsgi.py">
+            Require all granted
+        </Files>
+    </Directory>
+</VirtualHost>
+
+# Create 'Uploads' folder and set owner to 'www-data' or proper user.
