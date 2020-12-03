@@ -3,7 +3,6 @@ from flask import Flask, render_template, request, make_response, g
 from werkzeug.exceptions import HTTPException
 from flask.json import jsonify
 import base64
-from .translate import translate as _
 
 def create_app(test_config=None):
     path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

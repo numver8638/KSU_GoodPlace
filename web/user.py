@@ -235,6 +235,13 @@ class User:
             raise InvalidCredential('Password mismatch.')
 
 
+    def set_password(self, new_pw):
+        """
+        유저의 비밀번호를 설정.
+        """
+        database.set_credential(self.id, new_pw)
+
+
     def grant_permission(self, perm):
         """
         유저에게 권한을 부여. 상위의 권한을 부여한 경우 그 하위의 권한들도 전부 부여됨.
@@ -367,6 +374,7 @@ class User:
 
             return user
 
+
     @staticmethod
     def from_token(token:str):
         """
@@ -461,6 +469,10 @@ class AnnonymousUser(User):
 
     def update_password(self, old_pw, new_pw):
         raise NotImplementedError('Cannot change password of AnnonymousUser.')
+
+
+    def set_password(self, new_pw):
+        raise NotImplementedError('Cannot set password of AnnonymousUser.')
     
 
     def grant_permission(self, perm):

@@ -62,7 +62,7 @@
         $("#id").removeClass("is-invalid is-valid");
 
         $.getJSON("/api/auth/check_id/" + id, function(data) {
-            let conflict = data['conflict'];
+            let conflict = data["conflict"];
 
             if (typeof(conflict) === "boolean") {
                 $("#id").addClass(conflict ? "is-invalid" : "is-valid");
@@ -89,10 +89,10 @@
 
         let error_handler = function(xhr, status) {
             let msg_table = {
-                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
-                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+                400: "유효하지 않은 요청입니다. 다시 시도해주세요.",
+                500: "서버 내부 오류입니다. 다시 시도해주세요."
             };
-            $('#register_message').text(msg_table[xhr.status]);
+            $("#register_message").text(msg_table[xhr.status]);
         };
 
         let request_id = ksu_goodplace.generate_id();
@@ -107,7 +107,7 @@
             return;
         }
 
-        $.getJSON("/api/auth/register", { request_id: request_id }, function(data) {
+        $.getJSON("/api/auth/request_token", { request_id: request_id }, function(data) {
             let request_data = {
                 "request_id": request_id,
                 "user_id": id,
@@ -118,7 +118,7 @@
             };
 
             let crypt = new JSEncrypt();
-            crypt.setKey(data['key']);
+            crypt.setKey(data["key"]);
 
             let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
 

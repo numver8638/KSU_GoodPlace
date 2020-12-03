@@ -114,6 +114,16 @@ def update_credential(id, old_pw, new_pw):
 
     return True
 
+
+def set_credential(id, new_pw):
+    QUERY = "UPDATE UserTable SET UserPw=%s WHERE UserID=%s";
+
+    new_pwhash = generate_password_hash(new_pw, 'pbkdf2:sha256:10000', salt_length=16)
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, (new_pwhash, id))
+
+
 def query_user(id, pw):
     QUERY = "SELECT * FROM UserTable WHERE UserID=%s;"
 
@@ -159,21 +169,25 @@ def query_user_by_uid(uid):
 
 
 def delete_user(id):
-    QUERY = "DELETE FROM UserTable WHERE UserID=%s;"
+    QUERY_1 = "DELETE C FROM CommentTable AS C JOIN UserTable AS U ON C.UserUID=U.UserUID WHERE U.UserID=%s;"
+    QUERY_2 = "DELETE R FROM RecommendTable AS R JOIN UserTable AS U ON R.UserUID=U.UserUID WHERE U.UserID=%s;"
+    QUERY_3 = "DELETE FROM UserTable WHERE UserID=%s;"
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, id)
+        cursor.execute(QUERY_1, id)
+        cursor.execute(QUERY_2, id)
+        cursor.execute(QUERY_3, id)
 
 
 def query_users(start, count):
-    QUERY = "SELECT UserUID, UserNickname, UserProfile FROM UserTable LIMIT %s,%s;"
+    QUERY = "SELECT UserID, UserUID, UserNickname, UserProfile FROM UserTable LIMIT %s,%s;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, (start, count))
 
         result = cursor.fetchall()
 
-        return [ { 'uid': data['UserUID'], 'nickname': data['UserNickname'], 'profile_url': data['UserProfile'] } for data in result ]
+        return [ { 'id': data['UserID'], 'uid': data['UserUID'], 'nickname': data['UserNickname'], 'profile_url': data['UserProfile'] } for data in result ]
 
 #
 # Queries for posts
@@ -200,22 +214,20 @@ def delete_comment(comment_id):
 
 
 def get_comments(post_id, start, count):
-    QUERY = "SELECT U.UserUID, U.UserNickname, U.UserProfile, C.CommentID, C.Comment FROM CommentTable as C JOIN UserTable as U WHERE C.PostID=%s LIMIT %s,%s;"
+    QUERY = "SELECT UserUID, CommentID, Comment FROM CommentTable WHERE PostID=%s ORDER BY CommentID DESC LIMIT %s,%s;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, (post_id, start, count))
 
         return [ {
             'user_uid': result['UserUID'],
-            'user_nickname': result['UserNickname'],
-            'user_profile': result['UserProfile'],
             'comment_id': result['CommentID'],
             'comment': result['Comment']
         } for result in cursor.fetchall() ]
 
 
 def get_comment(comment_id):
-    QUERY = "SELECT U.UserUID, U.UserNickname, U.UserProfile, C.CommentID, C.Comment FROM CommentTable as C JOIN UserTable as U WHERE CommentID=%s;"
+    QUERY = "SELECT UserUID, CommentID, Comment FROM CommentTable WHERE CommentID=%s;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, comment_id)
@@ -227,32 +239,34 @@ def get_comment(comment_id):
         else:
             return {
                 'user_uid': result['UserUID'],
-                'user_nickname': result['UserNickname'],
-                'user_profile': result['UserProfile'],
                 'comment_id': result['CommentID'],
                 'comment': result['Comment']
             }
 
 
-def create_post(user_uid, name, addr, loc, picture_url):
-    QUERY = "INSERT INTO PostTable(UserUID, PostName, PostAddress, PostLocationLat, PostLocationLng, PostImage) VALUES (%s,%s,%s,%s,%s,%s);"
+def create_post(user_uid, name, addr, loc, picture_url, content, category):
+    QUERY = "INSERT INTO PostTable(UserUID, PostName, PostAddress, PostLocationLat, PostLocationLng, PostImage, PostContent, PostCategory) VALUES (%s,%s,%s,%s,%s,%s,%s,%s);"
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, (user_uid, name, addr, loc.lat, loc.lng, picture_url))
+        cursor.execute(QUERY, (user_uid, name, addr, loc.lat, loc.lng, picture_url, content, category))
 
 
-def update_post(post_id, name, addr, loc, picture_url):
-    QUERY = "UPDATE PostTable SET PostName=%s, PostAddress=%s, PostLocationLat=%s, PostLocationLng=%s, PostImage=%s WHERE PostID=%s;"
+def update_post(post_id, name, addr, loc, picture_url, content, category):
+    QUERY = "UPDATE PostTable SET PostName=%s, PostAddress=%s, PostLocationLat=%s, PostLocationLng=%s, PostImage=%s, PostContent=%s, PostCategory=%s WHERE PostID=%s;"
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, (name, addr, loc.lat, loc.lng, picture_url, post_id))
+        cursor.execute(QUERY, (name, addr, loc.lat, loc.lng, picture_url, content, category, post_id))
 
 
 def delete_post(post_id):
-    QUERY = "DELETE FROM PostTable WHERE PostID=%s;"
+    QUERY_1 = "DELETE FROM CommentTable WHERE PostID=%s;"
+    QUERY_2 = "DELETE FROM RecommendTable WHERE PostID=%s;"
+    QUERY_3 = "DELETE FROM PostTable WHERE PostID=%s;"
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, post_id)
+        cursor.execute(QUERY_1, post_id)
+        cursor.execute(QUERY_2, post_id)
+        cursor.execute(QUERY_3, post_id)
 
 
 def get_post(post_id):
@@ -273,7 +287,9 @@ def get_post(post_id):
                 'post_address': result['PostAddress'],
                 'post_lat': result['PostLocationLat'],
                 'post_lng': result['PostLocationLng'],
-                'post_image_url': result['PostImage']
+                'post_image_url': result['PostImage'],
+                'post_content': result['PostContent'],
+                'post_category': result['PostCategory']
             }
 
 
@@ -290,8 +306,49 @@ def get_posts(start, count):
             'post_address': result['PostAddress'],
             'post_lat': result['PostLocationLat'],
             'post_lng': result['PostLocationLng'],
-            'post_image_url': result['PostImage']
+            'post_image_url': result['PostImage'],
+            'post_content': result['PostContent'],
+            'post_category': result['PostCategory']
         } for result in cursor.fetchall() ]
+
+
+def get_posts_by_recommends(start, count):
+    QUERY = "WITH Recommend AS (SELECT PostID, COUNT(*) AS Count FROM RecommendTable GROUP BY PostID) SELECT * FROM Recommend JOIN PostTable ON Recommend.PostID=PostTable.PostID ORDER BY Count DESC LIMIT %s,%s;"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, (start, count))
+
+        return [ {
+            'user_uid': result['UserUID'],
+            'post_id': result['PostID'],
+            'post_name': result['PostName'],
+            'post_address': result['PostAddress'],
+            'post_lat': result['PostLocationLat'],
+            'post_lng': result['PostLocationLng'],
+            'post_image_url': result['PostImage'],
+            'post_content': result['PostContent'],
+            'post_category': result['PostCategory']
+        } for result in cursor.fetchall() ]
+
+
+def find_posts_by_category(category):
+    QUERY = "SELECT * FROM PostTable WHERE PostCategory LIKE %s;"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, "%" + category + "%")
+
+        return [ {
+            'user_uid': result['UserUID'],
+            'post_id': result['PostID'],
+            'post_name': result['PostName'],
+            'post_address': result['PostAddress'],
+            'post_lat': result['PostLocationLat'],
+            'post_lng': result['PostLocationLng'],
+            'post_image_url': result['PostImage'],
+            'post_content': result['PostContent'],
+            'post_category': result['PostCategory']
+        } for result in cursor.fetchall() ]
+
 
 
 def find_posts_by_name(name):
@@ -307,15 +364,17 @@ def find_posts_by_name(name):
             'post_address': result['PostAddress'],
             'post_lat': result['PostLocationLat'],
             'post_lng': result['PostLocationLng'],
-            'post_image_url': result['PostImage']
+            'post_image_url': result['PostImage'],
+            'post_content': result['PostContent'],
+            'post_category': result['PostCategory']
         } for result in cursor.fetchall() ]
 
 
 def find_posts_by_location(begin, end):
-    QUERY = "SELECT * FROM PostTable WHERE PostLocationLat BETWEEN %s AND %s AND PostLocationLng BETWEEN %s and %s;"
+    QUERY = "SELECT * FROM PostTable WHERE PostLocationLat BETWEEN %s AND %s AND PostLocationLng BETWEEN %s AND %s;"
 
     with get_cursor() as cursor:
-        cursor.execute(QUERY, (begin.lat, end.lat, begin.lng, end.lng))
+        cursor.execute(QUERY, (end.lat, begin.lat, end.lng, begin.lng))
 
         return [ {
             'user_uid': result['UserUID'],
@@ -324,5 +383,40 @@ def find_posts_by_location(begin, end):
             'post_address': result['PostAddress'],
             'post_lat': result['PostLocationLat'],
             'post_lng': result['PostLocationLng'],
-            'post_image_url': result['PostImage']
+            'post_image_url': result['PostImage'],
+            'post_content': result['PostContent'],
+            'post_category': result['PostCategory']
         } for result in cursor.fetchall() ]
+
+# Recommends
+def add_recommend(post_id, user_uid):
+    QUERY = "INSERT INTO RecommendTable(PostID,UserUID) VALUES(%s,%s);"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, (post_id, user_uid))
+
+
+def is_user_recommended(post_id, user_uid):
+    QUERY = "SELECT COUNT(*) AS Count FROM RecommendTable WHERE PostID=%s AND UserUID=%s;"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, (post_id, user_uid))
+
+        return cursor.fetchone()['Count'] != 0
+
+
+
+def remove_recommend(post_id, user_uid):
+    QUERY = "DELETE FROM RecommendTable WHERE PostID=%s AND UserUID=%s;"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, (post_id, user_uid))
+
+
+def get_recommend_count(post_id):
+    QUERY = "SELECT COUNT(*) AS Count FROM RecommendTable WHERE PostID=%s;"
+
+    with get_cursor() as cursor:
+        cursor.execute(QUERY, post_id)
+
+        return cursor.fetchone()['Count']

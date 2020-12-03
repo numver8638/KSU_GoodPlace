@@ -15,76 +15,966 @@
             <div class="card-header">
                 <ul class="nav nav-tabs card-header-tabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link active" id="search-tab" data-toggle="tab" href="#search" role="tab" aria-controls="search" aria-selected="true">검색</a>
+                        <a class="nav-link active" id="search_tab" data-toggle="tab" href="#search" role="tab" aria-controls="search" aria-selected="true">
+                            <img src="{{ url_for('static', filename='images/search.svg') }}">
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" id="recommend-tab" data-toggle="tab" href="#recommend" role="tab" aria-controls="recommend" aria-selected="false">추천</a>
+                        <a class="nav-link" id="recommend_tab" data-toggle="tab" href="#recommend" role="tab" aria-controls="recommend" aria-selected="false">
+                            <img src="{{ url_for('static', filename='images/star_fill.svg') }}">
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <!-- Hidden tab for post -->
+                        <a class="nav-link" id="post_tab" style="display: none;" data-toggle="tab" href="#post" role="tab" aria-controls="post" aria-selected="false"></a>
+                    </li>
+                    <li class="nav-item ml-auto">
+                        <a class="nav-link" id="add_post_tab" data-toggle="tab" href="#add_post" aria-controls="add_post" aria-selected="false">
+                            &plus;
+                        </a>
                     </li>
                 </ul>
             </div>
-            <div class="card-body tab-content menu-content" id="menuBody">
-                <div class="tab-pane fade show active" id="search" role="tabpanel" aria-labelledby="search-tab">
-                    <div class="input-group mb-3">
-                        <input class="form-control" type="text" placeholder="Search" aria-describedby="search-button">
-                        <div class="input-group-append" id="search-button">
-                            <button class="btn btn-outline-secondary" type="button">Search</button>
+            <div class="card-body tab-content menu-content" >
+                <div class="tab-pane fade show active" id="search" role="tabpanel" aria-labelledby="search_tab">
+                    <div class="mb-3">
+                        <div class="input-group mb-3" id="search_input">
+                            <input class="form-control" type="text" id="search_text" placeholder="Search" aria-describedby="search">
+                            <div class="input-group-append" id="search">
+                                <button class="btn btn-outline-primary" id="search_button" type="button">
+                                    <img src="{{ url_for('static', filename='images/search.svg') }}">
+                                </button>
+                                <button class="btn btn-outline-primary" id="range_search_button" type="button" data-toggle="tooltip" data-placement="top" title="지도 범위로 찾기">
+                                    <img src="{{ url_for('static', filename='images/cursor.svg') }}">
+                                </button>
+                            </div>
                         </div>
+                        <div class="invalid-feedback">
+                            검색어를 입력해주세요.
+                        </div>
+                        <div class="d-flex flex-column mb-3" id="search_content"></div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="recommend" role="tabpanel" aria-labelledby="recommend-tab">
-                    <div class="d-flex flex-column mb-3">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h4 class="card-title">Title</h4>
-                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
-                                <p class="card-text">Content</p>
+                <div class="tab-pane fade" id="recommend" role="tabpanel" aria-labelledby="recommend_tab">
+                    <div class="d-flex flex-column mb-3" id="recommend_content">
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="post" role="tabpanel" aria-labelledby="post_tab">
+                    <div class="d-flex flex-column" id="post_content">
+                        <img class="border round-sm mb-3" src="#" style="height: 150px;" id="post_tab_image">
+                        <h4 class="d-flex justify-content-center mb-3" id="post_tab_name">#</h4>
+                        <h6 class="d-flex justify-content-center text-muted mb-3" id="post_tab_address">#</h6>
+                        <h6 class="d-flex justify-content-center text-muted mb-3" id="post_tab_category">#</h6>
+                        <hr>
+                        <p class="d-flex justify-content-center" id="post_tab_content"></p>
+                        <div class="d-flex justify-content-end" id="post_tab_controls"></div>
+                        <hr>
+                        <h5>댓글</h5>
+                        <div class="mb-3">
+                            <div class="input-group mb-3" id="comment_input">
+                                {% if user.has_permission('user.posts.comments') %}
+                                    <input class="form-control" type="text" id="comment_text" placeholder="Comment" aria-describedby="comment">
+                                    <div class="input-group-append" id="comment">
+                                        <button class="btn btn-outline-primary" id="comment_button" type="button">
+                                            <img src="{{ url_for('static', filename='images/pencil.svg') }}">
+                                        </button>
+                                    </div>
+                                {% else %}
+                                    {% if user.is_annonymous() %}
+                                    <input class="form-control" type="text" id="comment_text" placeholder="로그인이 필요한 기능입니다." aria-describedby="comment" disabled>
+                                    {% else %}
+                                    <input class="form-control" type="text" id="comment_text" placeholder="권한이 없습니다." aria-describedby="comment" disabled>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="invalid-feedback">
+                                댓글을 작성해주세요.
                             </div>
                         </div>
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h4 class="card-title">Title</h4>
-                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
-                                <p class="card-text">Content</p>
-                            </div>
-                        </div>
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h4 class="card-title">Title</h4>
-                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
-                                <p class="card-text">Content</p>
-                            </div>
-                        </div>
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h4 class="card-title">Title</h4>
-                                <h6 class="card-subtitle mb-2 text-muted">Subtitle</h6>
-                                <p class="card-text">Content</p>
-                            </div>
+                        <div id="comment_content"></div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="add_post" role="tabpanel" aria-labelledby="add_post_tab">
+                    {% if user.is_annonymous() %}
+                    <div class="d-flex justify-content-center">
+                        <p>로그인이 필요한 기능입니다.</p>
+                    </div>
+                    {% elif not user.has_permission('user.posts.upload') %}
+                    <div class="d-flex justify-content-center">
+                        <p>권한이 없습니다.</p>
+                    </div>
+                    {% else %}
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="post_name" placeholder="이름">
+                        <div class="invalid-feedback">
+                            이름을 적어주세요.
                         </div>
                     </div>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="post_category" placeholder="카테고리 - 하나만 입력 가능합니다.">
+                        <div class="invalid-feedback">
+                            카테고리를 적어주세요.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="post_address" readonly placeholder="주소">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="search_location" data-toggle="modal" data-target="#search_location_modal" data-tooltip data-placement="top" title="주소 검색하기">
+                                    <img src="{{ url_for('static', filename='images/search.svg') }}">
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="select_location" data-toggle="tooltip" data-placement="top" title="지도에 직접 표시하기">
+                                    <img src="{{ url_for('static', filename='images/position_fill.svg') }}">
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="use_current_location" data-toggle="tooltip" data-placement="top" title="내 위치 사용하기">
+                                    <img src="{{ url_for('static', filename='images/cursor.svg') }}">
+                                </button>
+                            </div>
+                            <input type="hidden" id="post_location">
+                        </div>
+                        <div class="invalid-feedback" id="post_address_feedback">
+                            주소를 적어주세요.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="profileImage">장소 사진</label>
+                        <img class="border rounded-sm mb-3" width="100%" height="150" src="{{ url_for('static', filename='images/default_post.svg') }}" id="post_image">
+                        <div class="input-group" id="post_image_input_group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="post_image_input" accept="image/png,image/jpeg">
+                                <label class="custom-file-label" for="post_image_input">파일을 선택해주세요...</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-primary" id="upload_post_image">Upload</button>
+                            </div>
+                        </div>
+                        <div class="invalid-feedback">
+                            파일을 선택해 주세요.
+                        </div>
+                    </div>
+                    <div class="input-group mb-3">
+                        <textarea class="form-control" id="post_text"></textarea>
+                    </div>
+                    <div class="form-group d-flex justify-content-end">
+                        <button class="btn btn-primary" id="register_post">등록하기</button>
+                    </div>
+                    <div class="invalid-feedback" id="register_message"></div>
+                    <noscript>
+                        <div class="alert alert-primary show" role="alert">
+                            Javascript가 비활성화 되어있습니다. 비활성화시 게시물 등록이 불가능합니다. Javascript를 활성화 해주세요.
+                        </div>
+                    </noscript>
+                    {% endif %}
                 </div>
             </div>
         </div>
         <!-- 우측 하단 알림 바. 추후에 알림을 띄우는 부분으로 활용할 거임. -->
-        <div class="right-bottom" id="notice"></div>
+        <div class="notice-bar" id="notice"></div>
     </div>
 </div>
-<script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}"></script>
+<div class="modal fade" tabindex="-1" id="search_location_modal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Search Address</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>            
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="input-group mb-3" id="location_search_input">
+                        <input class="form-control" type="text" id="location_search_text" placeholder="Search" aria-describedby="search">
+                        <div class="input-group-append" id="search">
+                            <button class="btn btn-outline-primary" id="location_search_button" type="button">
+                                <img src="{{ url_for('static', filename='images/search.svg') }}">
+                            </button>
+                        </div>
+                    </div>
+                    <div class="invalid-feedback">
+                        주소를 입력해주세요.
+                    </div>
+                    <div class="d-flex flex-column mb-3" id="location_search_content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" tabindex="-1" id="delete_comment_modal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Delete Comment</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>            
+            <div class="modal-body">
+                <p class="text-danger mb-3">댓글을 삭제합니다. 계속 하시겠습니까?</p>
+                <input type="hidden" id="id">
+            </div>
+            <div class="modal-footer justify-content-end">
+                <button class="btn btn-outline-secondary" class="close" data-dismiss="modal" aria-label="Close">
+                    Cancel
+                </button>
+                <button class="btn btn-danger" id="delete_comment">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" tabindex="-1" id="delete_post_modal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Delete Post</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>            
+            <div class="modal-body">
+                <p class="text-danger mb-3">게시물을 삭제합니다. 계속 하시겠습니까?</p>
+                <input type="hidden" id="id">
+            </div>
+            <div class="modal-footer justify-content-end">
+                <button class="btn btn-outline-secondary" class="close" data-dismiss="modal" aria-label="Close">
+                    Cancel
+                </button>
+                <button class="btn btn-danger" id="delete_post">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="{{ url_for('static', filename='utils.js') }}"></script>
+<script type="text/javascript" src="http://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId={{ config['CLIENT_ID'] }}&submodules=geocoder"></script>
 <script>
+    const default_image = "{{ url_for('static', filename='images/default_post.svg') }}";
+    const search_body_tempate = `<div class="card mb-3"><div class="card-body"><h4 class="card-title"></h4><h6 class="card-subtitle mb-2 text-muted"></h6></div></div>`;
+    const comment_body_tempate = `<div class="card mb-3"><div class="card-body"><div class="d-flex"><img class="border rounded-circle mr-2" width="40" height="40" id="profile_image" src="#"><p class="flex-fill my-auto" id="user_nickname">#</p></div><hr><p id="comment">#</p></div></div>`;
+
+    // 네이버 지도 API 객체
+    let map = null;
+
+    // 오류 메세지 테이블
+    const message_table = {
+        400: "유효하지 않은 요청입니다. 다시 시도해주세요.",
+        401: "현재 로그인이 유효하지 않습니다. 다시 로그인해주세요.",
+        403: "권한이 없습니다.",
+        404: "삭제되거나 없는 게시물 입니다.",
+        500: "서버 내부 오류입니다. 다시 시도해주세요."
+    };
+
+    // 화면 로드가 완료되면 호출.
     $(function() {
-        // 네이버 지도 로드. 중심은 군산대학교 정문으로.
+        // Bootstrap tooltip 활성화
+        $("[data-tooltip],[data-toggle='tooltip']").tooltip();
+
+        // 지도 로드. 군산대학교 정문을 중심으로.
         let CAMPUS_LAT = 35.9455298;
         let CAMPUS_LNG = 126.6854321;
 
-        var options = {
+        map = new naver.maps.Map('map', {
             center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
             zoom: 17
-        };
+        });
+    });
 
-        var map = new naver.maps.Map('map', options);
+    // 검색 창에서 엔터 누를 시
+    $("#search_text").on("keypress", function(e) {
+        if (e.keyCode == 13) {
+            $("#search_button").click();
+        }
+    });
 
-        // 지도 로드된 영역 안에 있는 장소 좌표 목록을 로드해서 화면에 찍어주기.
-        // TODO: 구현.
+    let marker_list = {};
+
+    function enableAll() {
+        for (let key in marker_list) {
+            marker_list[key].setMap(map);
+        }
+    }
+
+    function addMarker(post_id, pos) {
+        marker_list[post_id] = new naver.maps.Marker({ position: pos });
+    }
+
+    function enableOne(post_id) {
+        for (let key in marker_list) {
+            marker_list[key].setMap(key == post_id ? map : null);
+        }
+    }
+
+    function clearMarker() {
+        for (let key in marker_list) {
+            marker_list[key].setMap(null);
+        }
+    }
+
+    function disableAll() {
+        for (let key in marker_list) {
+            marker_list[key].setMap(null);
+        }
+
+        marker_list = {};
+    }
+
+    // 댓글 로드하는 함수.
+    function loadComments(post_id, cont = false) {
+        let comment_content = $("#comment_content");
+
+        if (cont) {
+            // Remove last children. always 더보기 button.
+            comment_content.children().last().remove();
+        }
+        else {
+            // Reset old comments
+            comment_content.children().remove();
+        }
+
+        let start = comment_content.children().length;
+
+        $.getJSON("/api/posts/" + post_id + "/comments", { start: start, count: 20 }, function(data) {
+            if (data.count > 0) {
+                for (let comment_data of data.comments) {
+                    let comment = $(comment_body_tempate);
+
+                    if (comment_data.can_edit || comment_data.can_delete) {
+                        let items = [];
+
+                        // 댓글을 수정할 수 있으면 수정 버튼 추가.
+                        if (comment_data.can_edit) {
+                            let item = $(`<button class="btn btn-light btn-sm ml-1 my-auto" type="button"><img src="{{ url_for('static', filename='images/pencil.svg') }}"></button>`);
+                            item.data("comment_id", comment_data.comment_id);
+                            item.on("click", editCommentHandler);
+                            items.push(item);
+                        }
+
+                        // 댓글을 삭제할 수 있으면 삭제 버튼 추가.
+                        if (comment_data.can_delete) {
+                            let item = $(`<button class="btn btn-light btn-sm ml-1 my-auto" type="button" data-toggle="modal" data-target="#delete_comment_modal"><img src="{{ url_for('static', filename='images/trash.svg') }}"></button>`);
+                            item.data("comment_id", comment_data.comment_id);
+                            items.push(item);
+                        }
+
+                        comment.find("#user_nickname").after(items);
+                    }
+
+                    comment.find("#user_nickname").text(comment_data.user_nickname);
+                    comment.find("#profile_image").attr("src", comment_data.user_profile);
+                    comment.find("#comment").text(comment_data.comment);
+
+                    comment_content.append(comment);
+                }
+            }
+            else if (!cont) {
+                comment_content.append(`<div class="d-flex justify-content-center"><p>댓글이 없습니다.</p></div>`);
+            }
+        }).fail(function() {
+            comment_content.append(`<div class="d-flex justify-content-center"><p>댓글을 가져오는데 실패하였습니다.</p></div>`);
+        }).done(function() {
+            let button = $(`<div class="d-flex justify-content-center"><button class="btn btn-outline-primary" type="button">더 보기</button></div>`);
+
+            button.on("click", function(e) { loadComments(post_id, true); });
+
+            comment_content.append(button);
+        });
+    }
+
+    function recommendHandler(event) {
+        let self = $(this);
+        let recommended = self.hasClass("active");
+        let post_id = $("#post_tab").data("post_id");
+
+        $.ajax("/api/posts/" + post_id + "/recommends", {
+            method: "POST",
+            dataType: "JSON",
+            contentType: "application/json",
+            data: JSON.stringify({ recommend: !recommended }),
+            error: function(xhr) {
+                data.recommend ? item.addClass("active") : item.removeClass("active");
+                item.attr("aria-pressed", data.recommended);
+
+                ksu_goodplace.notify("warning", "추천 정보를 수정하는데에 실패했습니다. - " + message_table[xhr.status], 3000);
+            }
+        });
+    }
+
+    // 검색에서 게시물을 선택했을 때 게시물을 로드하는 함수.
+    function loadPost(post_id) {
+        // Show tab
+        $("#post_tab").tab("show");
+
+        // Set current post id.
+        $("#post_tab").data("post_id", post_id);
+
+        // Reset contents
+        {
+            $("#post_tab_name").text("");  
+            $("#post_tab_address").text("");
+            $("#post_tab_category").text("");
+            $("#post_tab_content").text("");
+            $("#post_tab_image").attr("src", default_image);
+            $("#post_tab_controls").children().remove();
+        }
+
+        // 게시물 로드.
+        $.getJSON("/api/posts/" + post_id, function(data) {
+            $("#post_tab_name").append(data.name);
+            $("#post_tab_address").append(data.address);
+            $("#post_tab_image").attr("src", data.picture_url);
+            $("#post_tab_category").append("#" + data.category);
+            $("#post_tab_content").text(data.content);
+
+            if (data.can_edit || data.can_delete) {
+                let items = [];
+
+                // 게시물을 수정할 수 있으면 수정 버튼 추가.
+                if (data.can_edit) {
+                    let item = $(`<button class="btn btn-light btn-sm ml-1 my-auto" type="button"><img src="{{ url_for('static', filename='images/pencil.svg') }}"></button>`);
+                    item.data("post_id", post_id);
+                    item.on("click", editPostHandler);
+                    items.push(item);
+                }
+
+                // 게시물을 삭제할 수 있으면 삭제버튼 추가.
+                if (data.can_delete) {
+                    let item = $(`<button class="btn btn-light btn-sm ml-1 my-auto" type="button" data-toggle="modal" data-target="#delete_post_modal"><img src="{{ url_for('static', filename='images/trash.svg') }}"></button>`);
+                    item.data("post_id", post_id);
+                    items.push(item);
+                }
+
+                $("#post_tab_controls").append(items);
+            }
+
+            $.getJSON("/api/posts/" + post_id + "/recommends", function(data) {
+                let item = $(`<button class="btn btn-outline-primary btn-sm ml-1 my-auto" type="button" data-toggle="button" aria-pressed="false"><img src="{{ url_for('static', filename='images/star_fill.svg') }}"></button>`);
+                
+                data.recommended ? item.addClass("active") : item.removeClass("active");
+                item.attr("aria-pressed", data.recommended);
+                item.on("click", recommendHandler);
+
+                $("#post_tab_controls").prepend(item);
+            }).fail(function(xhr) {
+                if (xhr.status != 401 && xhr.status != 403) {
+                    ksu_goodplace.notify("warning", "추천 정보를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000);
+                }
+            });
+
+            enableOne(post_id);
+
+            map.morph({ lat: data.location.latitude, lng: data.location.longitude }, 18);
+
+            // 댓글 읽어오기.
+            loadComments(post_id);
+        }).fail(function(xhr) { ksu_goodplace.notify("warning", "게시물 정보를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+    }
+
+    $("#search_tab").on("shown.bs.tab", function() { enableAll(); });
+
+    // 검색 버튼 클릭시
+    $("#search_button").on("click", function() {
+        let search = $("#search_text").val();
+
+        // Reset invalid feedback
+        $("#search_input").removeClass("is-invalid");
+
+        // Reset search content
+        $("#search_content").children().remove();
+
+        // Reset markers
+        clearMarker();
+
+        if (search.length > 0) {
+            $.getJSON("/api/posts/search", { query: search }, function(data) {
+                if (data["count"] == 0) {
+                    // no result
+                    $("#search_content").append(`<div class="d-flex justify-content-center"><p>No Result.</p></div>`);
+                }
+                else {
+                    for (let post of data.posts) {
+                        var body = $(search_body_tempate);
+
+                        body.find(".card-title").append(post.name);
+                        body.find(".card-subtitle").append(post.address);
+                        body.attr("data-post-id", post.id);
+                        body.on("click", function() { loadPost(post.id); });
+
+                        addMarker(post.id, { lat: post.location.latitude, lng: post.location.longitude });
+
+                        $("#search_content").append(body);
+                    }
+
+                    enableAll();
+                }
+            }).fail(function(xhr) { ksu_goodplace.notify("warning", "검색 결과를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+        }
+        else {
+            $("#search_input").addClass("is-invalid");
+        }
+    });
+
+    $("#range_search_button").on("click", function() {
+        // Reset invalid feedback
+        $("#search_input").removeClass("is-invalid");
+        
+        // Reset search content
+        $("#search_content").children().remove();
+
+        // Reset markers
+        clearMarker();
+
+        let search = [
+            map.getBounds().getNE().lat(), map.getBounds().getNE().lng(),
+            map.getBounds().getSW().lat(), map.getBounds().getSW().lng()
+        ].join(",");
+
+        $.getJSON("/api/posts/search", { coord: search }, function(data) {
+            if (data["count"] == 0) {
+                // no result
+                $("#search_content").append(`<div class="d-flex justify-content-center"><p>No Result.</p></div>`);
+            }
+            else {
+                for (let post of data.posts) {
+                    var body = $(search_body_tempate);
+
+                    body.find(".card-title").append(post.name);
+                    body.find(".card-subtitle").append(post.address);
+                    body.attr("data-post-id", post.id);
+                    body.on("click", function() { loadPost(post.id); });
+
+                    addMarker(post.id, { lat: post.location.latitude, lng: post.location.longitude });
+
+                    $("#search_content").append(body);
+                }
+
+                enableAll();
+            }
+        }).fail(function(xhr) { ksu_goodplace.notify("warning", "검색 결과를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+    });
+    
+    $("#recommend_tab").on("show.bs.tab", function() {
+        // Reset marker & search tab.
+        clearMarker();
+        $("#search_content").children().remove();
+        $("#search_input").removeClass("is-invalid");
+        $("#search_input").val("");
+
+        $.getJSON("/api/posts/recommends", function(data) {
+            if (data.count == 0) {
+                // no result
+                $("#recommend_content").append(`<div class="d-flex justify-content-center"><p>추천 목록이 없습니다.</p></div>`);
+            }
+            else {
+                for (let post of data.posts) {
+                    var body = $(search_body_tempate);
+
+                    body.find(".card-title").append(post.name);
+                    body.find(".card-subtitle").append(post.address);
+                    body.attr("data-post-id", post.id);
+                    body.on("click", function() { loadPost(post.id); });
+
+                    addMarker(post.id, { lat: post.location.latitude, lng: post.location.longitude });
+
+                    $("#recommend_content").append(body);
+                }
+
+                enableAll();
+            }
+        }).fail(function(xhr) { ksu_goodplace.notify("warning", "추천 목록을 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+    });
+
+    $("#recommend_tab").on("hide.bs.tab", function() {
+        // Reset marker & recommend tab.
+        clearMarker();
+
+        $("#recommend_content").children().remove();
     });
 </script>
+{% if not user.is_annonymous() %}
+{# 이 부분은 로그인한 경우에만 로드함. #}
+<script>
+    const search_location_body_tempate = `<div class="card mb-3"><div class="card-body"><h5 class="card-title"></h5><h6 class="card-subtitle mb-2 text-muted"></h6></div></div>`;
+
+    // 현재 지정한 위치 Marker
+    let selected_pos = null;
+
+    function setPosition(coord, address) {
+        // 현재 지정한 위치가 있으면 초기화.
+        if (selected_pos !== null) {
+            selected_pos.setMap(null);
+
+            selected_pos = null;
+        }
+
+        selected_pos = new naver.maps.Marker({
+            position: coord,
+            map: map
+        });
+
+        $("#post_address").val(address);
+        $("#post_location").val(coord.lat() + "," + coord.lng());
+    }
+
+    function getAddress(coord) {
+        // 네이버 ReverseGeocode API로 위도/경도를 주소로 변환.
+        naver.maps.Service.reverseGeocode({
+            coords: coord,
+            orders: [
+                naver.maps.Service.OrderType.ADDR,
+                naver.maps.Service.OrderType.ROAD_ADDR
+            ].join(",")
+        }, function(status, response) {
+            if (status === naver.maps.Service.Status.ERROR) {
+                ksu_goodplace.notify("warning", "위치를 주소로 변환하는데 실패하였습니다. 다시 시도해주세요.", 5000);
+            }
+            else {
+                let address = response.v2.address.roadAddress;
+
+                if (address !== "") {
+                    setPosition(coord, address);
+                }
+                else {
+                    ksu_goodplace.notify("warning", "위치를 주소로 변환하는데 실패하였습니다. 다시 시도해주세요.", 5000);
+                }
+            }
+        });
+    }
+
+    $("#add_post_tab").on("shown.bs.tab", function() {
+        disableAll();
+    });
+
+    $("#search_location_modal").on("shown.bs.modal", function(e) {
+        // Reset contents and focus on input.
+        $("#location_search_content").children().remove();
+        $("#location_search_text").val("");
+        $("#location_search_text").focus();
+    });
+
+    $("#location_search_text").on("keypress", function(e) {
+        if (e.keyCode == 13) {
+            $("#location_search_button").click();
+        }
+    });
+
+    function onLocationItemClick(event) {
+        let self = $(this);
+
+        let address = self.data("address");
+        let coord = self.data("coord");
+
+        setPosition(coord, address);
+
+        $("#search_location_modal").modal("hide");
+    }
+
+    $("#location_search_button").on("click", function() {
+        let search_text = $("#location_search_text").val();
+        let content = $("#location_search_content");
+
+        // Clear results
+        content.children().remove();
+
+        // Reset invalid feedback.
+        $("#location_search_input").removeClass("is-invalid");
+
+        if (search_text.length == 0) {
+            $("#location_search_input").addClass("is-invalid");
+            return;
+        }
+
+        naver.maps.Service.geocode({
+            query: search_text
+        }, function(status, response) {
+            if (status !== naver.maps.Service.Status.OK || response.v2.addresses.length === 0) {
+                content.append(
+                    $("<p>").append("검색 결과가 없습니다.")
+                );
+            }
+            else {
+                for (let address of response.v2.addresses) {
+                    var body = $(search_location_body_tempate);
+
+                    body.find(".card-title").append(address.roadAddress);
+                    body.find(".card-subtitle").append(address.jibunAddress);
+
+                    body.data("address", address.roadAddress);
+                    body.data("coord", new naver.maps.LatLng(address.y, address.x));
+                    body.on("click", onLocationItemClick);
+
+                    content.append(body);
+                }
+            }
+        });
+    });
+
+    // 현재 위치를 가져올 때
+    $("#use_current_location").on("click", function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) { getAddress(new naver.maps.LatLng(position.coords.latitude, position.coords.longitude)); },
+                function() { ksu_goodplace.notify("warning", "현재 위치를 가져올 수 없습니다. - 위치 정보 수집이 거부되었습니다."); }
+            );
+        }
+        else {
+            ksu_goodplace.notify("warning", "현재 위치를 가져올 수 없습니다. - 지원하지 않는 기능입니다.");
+        }
+    });
+
+    // 지도에서 위치를 선택할 때
+    $("#select_location").on("click", function() {
+        if (selected_pos !== null) {
+            selected_pos.setMap(null);
+
+            selected_pos = null;
+        }
+
+        naver.maps.Event.once(map, "click", function (e) {
+            getAddress(e.coord);
+        });
+    });
+
+    // 게시물 이미지 업로드 할 때
+    $("#upload_post_image").on("click", function() {
+        // Reset invalid feedback.
+        $("#post_image_input_group").removeClass("is-invalid");
+
+        var data = new FormData();
+        let file = $("#post_image_input")[0].files[0];
+
+        // 파일 선택했는지 체크.
+        if (file === undefined) {
+            $("#post_image_input_group").addClass("is-invalid");
+            return;
+        }
+
+        data.set("file", file);
+
+        // 파일 업로드
+        $.ajax({
+            url: "/api/resources/upload",
+            method: "POST",
+            dataType: "JSON",
+            data: data,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                $("#post_image").attr("src", data.url);
+                ksu_goodplace.notify("success", "사진 업로드에 성공했습니다.", 3000);
+            },
+            fail: function(xhr) {
+                ksu_goodplace.notify("warning", "사진 업로드에 실패했습니다. - " + message_table[xhr.status], 3000);
+            }
+        });
+    });
+
+    // 게시물을 등록할 때
+    $("#register_post").on("click", function() {
+        let post_id = $("#add_post_tab").data("post_id");
+        let edit_mode = (typeof(post_id) !== "undefined" && post_id !== null);
+
+        let post_name = $("#post_name").val();
+        let post_addr = $("#post_address").val();
+        let post_category = $("#post_category").val();
+        let post_loc = $("#post_location").val();
+        let post_image = $("#post_image").attr("src");
+        let post_content = $("#post_text").val();
+
+        if (post_name.length == 0) {
+            $("#post_name").addClass("is-invalid");
+            return;
+        }
+
+        if (post_addr.length == 0 || post_loc.length == 0) {
+            $("#post_address_feedback").text("주소를 적어주세요.");
+            $("#post_address").addClass("is-invalid");
+            
+            return;
+        }
+
+        if (post_category.length == 0) {
+            $("#post_category").addClass("is-invalid");
+            return;
+        }
+
+        if (post_image === default_image) {
+            post_image = null;
+        }
+
+        if (post_content.length == 0) {
+            post_content = null;
+        }
+
+        let method = edit_mode ? "PUT" : "POST";
+        let url = "/api/posts";
+
+        if (edit_mode) {
+            url += "/" + post_id;
+        }
+
+        $.ajax(url, {
+            method: method,
+            dataType: "JSON",
+            contentType: "application/json",
+            data: JSON.stringify({ name: post_name, address: post_addr, location: post_loc, picture_url: post_image, content: post_content, category: post_category }),
+            success: function(data, status, xhr) {
+                // 추가 페이지 초기화.
+                $("#post_name").val("");
+                $("#post_address").val("");
+                $("#post_location").val("");
+                $("#post_category").val("");
+                $("#post_image_input").val("");
+                $("#post_image").attr("src", default_image);
+                $("#post_text").val("");
+                $("#add_post_tab").data("post_id", null);
+
+                if (edit_mode) {
+                    $("#post_tab").tab("show");
+                    loadPost(post_id);
+                }
+
+                ksu_goodplace.notify("success", edit_mode ? "장소 수정에 성공하였습니다." : "장소 등록에 성공하였습니다.", 3000);
+            },
+            error: function(xhr) {
+                ksu_goodplace.notify("warning", (edit_mode ? "장소 수정에 실패했습니다 - " : "장소 등록에 실패했습니다 - ") + message_table[xhr.status], 3000);
+            }
+        });
+    });
+
+    // 댓글 작성 버튼을 눌렀을 때
+    $("#comment_button").on("click", function() {
+        let post_id = $("#post_tab").data("post_id");
+        let comment_id = $("#comment_text").data("comment_id");
+        let comment_text = $("#comment_text").val();
+        let edit_mode = (typeof(comment_id) !== "undefined" && comment_id !== null);
+
+        // Reset invalid feedback.
+        $("#comment_input").removeClass("is-invalid");
+    
+        if (comment_text.length == 0) {
+            $("#comment_input").addClass("is-invalid");
+            return;
+        }
+
+        let url = "/api/posts/" + post_id + "/comments";
+
+        if (edit_mode) {
+            url += "/" + comment_id;
+        }
+
+        let method = edit_mode ? "PUT" : "POST";
+
+        $.ajax(url, {
+            method: method,
+            dataType: "JSON",
+            contentType: "application/json",
+            data: JSON.stringify({ comment: comment_text }),
+            success: function(data) {
+
+                ksu_goodplace.notify("success", edit_mode ? "댓글 수정에 성공하였습니다." : "댓글 작성에 성공하였습니다.", 3000);
+
+                // Clear comment input
+                $("#comment_text").val("");
+                // Clear edit mode
+                $("#comment_text").data("comment_id", null);
+                // Reload comments.
+                loadComments(post_id);
+            },
+            fail: function(xhr) {
+                ksu_goodplace.notify("warning", (edit_mode ? "댓글 수정에 실패하였습니다. - " : "댓글 작성에 실패하였습니다. - ") + message_table[xhr.status], 3000);
+            }
+        });
+    });
+
+    $("#delete_comment_modal").on("show.bs.modal", function(e) {
+        let id = $(e.relatedTarget).data("comment_id");
+
+        $("#delete_comment_modal").find("#id").val(id);
+    });
+
+    $("#delete_comment").on("click", function() {
+        let post_id = $("#post_tab").data("post_id");
+        let comment_id = $("#delete_comment_modal").find("#id").val();
+
+        $.ajax("/api/posts/" + post_id + "/comments/" + comment_id, {
+            method: "DELETE",
+            dataType: "JSON",
+            success: function(data) {
+                ksu_goodplace.notify("success", "댓글을 삭제하였습니다.", 3000);
+                loadComments(post_id);
+            },
+            fail: function(xhr) {
+                ksu_goodplace.notify("warning", "댓글을 삭제하는데에 실패하였습니다. - " + message_table[xhr.status], 3000);
+            },
+            complete: function() {
+                $("#delete_comment_modal").modal("hide");
+            }
+        });
+    });
+
+    $("#delete_post_modal").on("show.bs.modal", function(e) {
+        let id = $(e.relatedTarget).data("post_id");
+
+        $("#delete_post_modal").find("#id").val(id);
+    });
+
+    $("#delete_post").on("click", function() {
+        let id = $("#delete_post_modal").find("#id").val();
+
+        $.ajax("/api/posts/" + id, {
+            method: "DELETE",
+            dataType: "JSON",
+            success: function(data) {
+                ksu_goodplace.notify("success", "게시물을 삭제하였습니다.", 3000);
+                $("#search_tab").tab("show");
+                $(`[data-post-id='${id}']`).remove();
+                
+                if (selected_pos !== null) {
+                    selected_pos.setMap(null);
+                    selected_pos = null;
+                }
+            },
+            fail: function(xhr) {
+                ksu_goodplace.notify("warning", "게시물을 삭제하는데에 실패하였습니다. - " + message_table[xhr.status], 3000);
+            },
+            complete: function() {
+                $("#delete_post_modal").modal("hide");
+            }
+        });
+    });
+
+    function editCommentHandler(event) {
+        let post_id = $("#post_tab").data("post_id");
+        let comment_id = $(this).data("comment_id");
+
+        $.getJSON("/api/posts/" + post_id +"/comments/" + comment_id, function(data) {
+            let comment_text = $("#comment_text");
+            
+            comment_text.val(data.comment);
+            comment_text.data("comment_id", comment_id);
+            comment_text.focus(); 
+        }).fail(function(xhr) {
+            ksu_goodplace.notify("warning", "댓글 정보를 가져오는데에 실패하였습니다. - " + message_table[xhr.status], 3000);
+        });
+    }
+
+    function editPostHandler(event) {
+        let post_id = $(this).data("post_id");
+
+        $.getJSON("/api/posts/" + post_id, function(data) {
+            $("#post_name").val(data.name);
+            $("#post_address").val(data.address);
+            $("#post_category").val(data.category);
+            $("#post_location").val(data.location.latitude + "," + data.location.longitude);
+            $("#post_image_input").val("");
+            $("#post_image").attr("src", data.post_image);
+            $("#post_text").val(data.content);
+            $("#add_post_tab").data("post_id", post_id);
+
+            $("#add_post_tab").tab("show");
+        }).fail(function(xhr) {
+            ksu_goodplace.notify("warning", "게시글 정보를 가져오는데에 실패하였습니다. - " + message_table[xhr.status], 3000);
+        });
+    }
+</script>
+{% endif %}
 {% endblock %}

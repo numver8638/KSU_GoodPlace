@@ -6,80 +6,92 @@
 {% endblock %}
 
 {% block content %}
-<div class="card mx-auto" style="max-width: 500px; margin-top: 120px;">
-    <div class="card-header">
-        <h3>Login</h3>
-    </div>
-    <div class="card-body" id="login_form">
-        <div class="input-group mb-3">
-            <input id="id" type="text" class="form-control" placeholder="Username" aria-label="Username">
-            <div class="invalid-feedback">
-                아이디를 입력해주세요.
-            </div>
+<div class="container" style="margin-top: 120px;">
+    <div class="card mx-auto" style="max-width: 400px;">
+        <div class="card-header">
+            <h3>Login</h3>
         </div>
-        <div class="input-group mb-3">
-            <input id="pw" type="password" class="form-control" placeholder="Password" aria-label="Password">
-            <div class="invalid-feedback">
-                비밀번호를 입력해주세요.
+        <div class="card-body" id="login_form">
+            <div class="input-group mb-3">
+                <input id="id" type="text" class="form-control" placeholder="Username" aria-label="Username" autofocus tabindex="1">
+                <div class="invalid-feedback">
+                    아이디를 입력해주세요.
+                </div>
             </div>
-        </div>
-        <div class="input-group mb-3 justify-content-end" id="login_button_group">
-            <a role="button" class="btn btn-link" href="{{ url_for('views.register') }}">Register</a>
-            <button class="btn btn-primary" id="login_button">Login</button>
-        </div>
-        <div class="invalid-feedback" id="login_message"></div>
-        <noscript>
-            <div class="alert alert-primary show" role="alert">
-                Javascript가 비활성화 되어있습니다. 비활성화시 로그인이 불가능합니다. Javascript를 활성화 해주세요.
+            <div class="input-group mb-3">
+                <input id="pw" type="password" class="form-control" placeholder="Password" aria-label="Password" tabindex="2">
+                <div class="invalid-feedback">
+                    비밀번호를 입력해주세요.
+                </div>
             </div>
-        </noscript>
+            <div class="input-group mb-3 justify-content-end" id="login_button_group">
+                <a role="button" class="btn btn-link" href="{{ url_for('views.register') }}" tabindex="4">Register</a>
+                <button class="btn btn-primary" id="login_button" tabindex="3">Login</button>
+            </div>
+            <div class="invalid-feedback" id="login_message"></div>
+            <noscript>
+                <div class="alert alert-primary show" role="alert">
+                    Javascript가 비활성화 되어있습니다. 비활성화시 로그인이 불가능합니다. Javascript를 활성화 해주세요.
+                </div>
+            </noscript>
+        </div>
     </div>
 </div>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script src="{{ url_for('static', filename='sha256.min.js') }}"></script>
 <script src="{{ url_for('static', filename='jsencrypt.min.js') }}"></script>
 <script>
-    $("#login_button").on('click', function() {
+    // Do login if user press enter.
+    $(document).on("keypress", function(e) {
+        if (e.keyCode == 13) {
+            $("#login_button").click();
+        }
+    });
+
+    // Do login if user click login button.
+    $("#login_button").on("click", function() {
         let id = $("#id").val();
         let pw = $("#pw").val();
 
         let error_handler = function(xhr, status) {
             let msg_table = {
-                400: '유효하지 않은 요청입니다. 다시 시도해주세요.',
-                403: '아이디 혹은 비밀번호가 일치하지 않습니다.',
-                500: '서버 내부 오류입니다. 다시 시도해주세요.'
+                400: "유효하지 않은 요청입니다. 다시 시도해주세요.",
+                403: "아이디 혹은 비밀번호가 일치하지 않습니다.",
+                500: "서버 내부 오류입니다. 다시 시도해주세요."
             };
-            $('#login_message').text(msg_table[xhr.status]);
-            $('#login_button_group').addClass('is-invalid');
+            $("#login_message").text(msg_table[xhr.status]);
+            $("#login_button_group").addClass("is-invalid");
         };
 
         // Reset invalid-feedbacks
-        (id.length == 0) ? $('#id').addClass('is-invalid') : $('#id').removeClass('is-invalid');
-        (pw.length == 0) ? $('#pw').addClass('is-invalid') : $('#pw').removeClass('is-invalid');
-        $('#login_button_group').removeClass('is-invalid');
+        (id.length == 0) ? $("#id").addClass("is-invalid") : $("#id").removeClass("is-invalid");
+        (pw.length == 0) ? $("#pw").addClass("is-invalid") : $("#pw").removeClass("is-invalid");
+        $("#login_button_group").removeClass("is-invalid");
 
         if (id.length != 0 && pw.length != 0) {
             let request_id = ksu_goodplace.generate_id();
+            
             // 서버에서 먼저 토큰을 발급 받고 로그인을 시작.
-            $.getJSON('/api/auth/login', { request_id: request_id }, function (data) {
+            $.getJSON("/api/auth/request_token", { request_id: request_id }, function (data) {
                 let request_data = {
-                    'request_id': request_id,
-                    'user_id': id,
-                    'user_pw': sha256(pw)
+                    "request_id": request_id,
+                    "user_id": id,
+                    "user_pw": sha256(pw)
                 };
 
                 let crypt = new JSEncrypt();
-                crypt.setKey(data['key']);
+                crypt.setKey(data["key"]);
 
                 let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
 
-                $.ajax('/api/auth/login', {
-                    method: 'POST',
-                    dataType: 'JSON',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ 'data': encrypted_data, 'token': data['token'] }),
+                $.ajax("/api/auth/login", {
+                    method: "POST",
+                    dataType: "JSON",
+                    contentType: "application/json",
+                    data: JSON.stringify({ "data": encrypted_data, "token": data["token"] }),
                     success: function(data, status, xhr) {
                         // 반환되는 유저 인증 토큰은 서버에서 쿠키로 저장되었으므로 무시.
+                        // 메인 화면으로 리디렉트.
                         window.location.assign("{{ url_for('views.index') }}");
                     },
                     error: error_handler

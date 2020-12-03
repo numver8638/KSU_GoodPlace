@@ -1,25 +1,22 @@
-'use strict';
+"use strict";
 
 const ksu_goodplace = {
-    notify: function(type, message) {
-        let noticeBar = $('#notice');
+    notify: function(type, message, ticks) {
+        let notice_template = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button class="close" type="button" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>`;
+        let noticeBar = $("#notice");
 
         if (noticeBar == undefined || noticeBar == null) {
             console.warn("cannot find #notice.");
             return;
         }
 
-        var notice = $("<div>").addClass("alert alert-" + type + " alert-dismissible fade show").attr("role", "alert");
-
-        notice.append(message);
-
-        notice.append(
-            $("<button>").addClass("close").attr("type", "button").attr("data-dismiss", "alert").attr("aria-label", "Close").append(
-                $("<span>").attr("aria-hidden", "true").append("&times;")
-            )
-        );
+        var notice = $(notice_template);
 
         noticeBar.append(notice);
+
+        if (typeof ticks !== "undefined") {
+            setTimeout(function() { notice.alert("close"); }, ticks);
+        }
     },
     // 16자리 랜덤 문자열을 생성하는 함수.
     generate_id: function() {
@@ -28,14 +25,14 @@ const ksu_goodplace = {
     
         var str = "";
 
-        array.forEach(e => {
-            str += e < 16 ? ("0" + e.toString(16)) : e.toString(16); 
-        });
+        for (let b of array) {
+            str += b < 16 ? ("0" + b.toString(16)) : b.toString(16);
+        }
 
         return str;
     },
     get_cookie: function(key) {
-        let regex = new RegExp(key + "=(.+?);");
+        let regex = new RegExp(key + "=(.+?)(;|$)");
 
         let result = document.cookie.match(regex);
 

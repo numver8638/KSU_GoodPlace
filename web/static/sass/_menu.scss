@@ -1,13 +1,14 @@
 
 .menu {
     position: absolute;
-    top: 100px;
+    top: 10vh;
     left: 0px;
     margin-left: 50px;
-    width: 500px;
-    height: 70vh;
+    width: 450px;
+    height: 80vh;
 
     .menu-content {
-        overflow: scroll;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 }

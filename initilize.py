@@ -166,9 +166,11 @@ def main():
                 UserUID CHAR(12) NOT NULL,
                 PostName VARCHAR(64) NOT NULL,
                 PostAddress VARCHAR(128) NOT NULL,
+                PostCategory VARCHAR(32) NOT NULL,
                 PostLocationLat FLOAT(10,7) NOT NULL,
                 PostLocationLng FLOAT(10,7) NOT NULL,
                 PostImage VARCHAR(128) NULL,
+                PostContent VARCHAR(1024) NULL,
 
                 PRIMARY KEY(PostID)
             );
@@ -177,12 +179,23 @@ def main():
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS CommentTable(
-                CommentID INTEGER NOT NULL UNQUE AUTO_INCREMENT,
+                CommentID INTEGER NOT NULL UNIQUE AUTO_INCREMENT,
                 UserUID CHAR(12) NOT NULL,
                 PostID INTEGER NOT NULL,
                 Comment VARCHAR(1024) NOT NULL,
 
                 PRIMARY KEY (CommentID),
+                FOREIGN KEY (UserUID) REFERENCES UserTable(UserUID),
+                FOREIGN KEY (PostID) REFERENCES PostTable(PostID)
+            );
+            """
+        )
+        cursor.execute(
+            """
+            CREATE IF NOT EXISTS RecommendTable(
+                UserUID CHAR(12) NOT NULL,
+                PostID INTEGER NOT NULL,
+
                 FOREIGN KEY (UserUID) REFERENCES UserTable(UserUID),
                 FOREIGN KEY (PostID) REFERENCES PostTable(PostID)
             );
@@ -198,7 +211,7 @@ def main():
         perms = serialize_permissions(PREDEFINED_PERMISSIONS)
         uid = gen_salt(12)
 
-        cursor.execute("INSERT INTO UserTable VALUES(%s,%s,%s,%s,%s,NULL,%s);", (user_id, uid, hashpw, user_name, user_nickname, perms))
+        cursor.execute("INSERT INTO UserTable VALUES(%s,%s,%s,%s,%s,NULL,%s,NULL);", (user_id, uid, hashpw, user_name, user_nickname, perms))
     
     db.commit()
     db.close()

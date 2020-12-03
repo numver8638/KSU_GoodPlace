@@ -1,18 +1,31 @@
 {% extends 'layout/base.html' %}
 
 {% block title %}
-군산대 통합 장소 시스템 - {{ user.nickname }}
+군산대 통합 장소 시스템 - 관리자
 {% endblock %}
 
 {% block content %}
 <div class="container" style="margin-top: 120px;">
     <div class="card">
-        <div class="card-header">
-            <h2>Setting</h2>
+        <div class="card-header d-flex">
+            <a class="btn btn-light my-auto" href="{{ url_for('views.admin') }}">
+                <img src="{{ url_for('static', filename='images/arrow.svg') }}">
+            </a>
+            <h4 class="my-auto ml-3">Update User</h4>
         </div>
         <div class="card-body">
+            <label for="id">User ID</label>
+            <div class="input-group">
+                <input class="text" readonly value="{{ target_user.id }}">
+            </div>
+            <hr>
+            <label for="uid">User UID</label>
+            <div class="input-group">
+                <input class="text" readonly value="{{ target_user.uid }}">
+            </div>
+            <hr>
             <div class="d-flex justify-content-start">
-                <img class="border rounded-circle" width="100" height="100" src="{{ user.profile_url }}" id="profile">
+                <img class="border rounded-circle" width="100" height="100" src="{{ target_user.profile_url }}" id="profile">
                 <div class="flex-fill ml-2">
                     <label for="profileImage">Profile Image</label>
                     <div class="input-group">
@@ -32,7 +45,7 @@
             <hr>
             <label for="nickname">Change Nickname</label>
             <div class="input-group">
-                <input type="text" class="form-control" id="nickname" placeholder="{{ user.nickname }}">
+                <input type="text" class="form-control" id="nickname" placeholder="{{ target_user.nickname }}">
                 <div class="input-group-append">
                     <button class="btn btn-outline-primary" type="button" id="apply_nickname">Apply</button>
                 </div>
@@ -44,6 +57,28 @@
             <div class="input-group justify-content-between">
                 <label class="my-auto" for="change_password">Change Password</label>
                 <button class="btn btn-primary" data-toggle="modal" data-target="#password_change_modal">Change</button>
+            </div>
+            <hr>
+            <div>
+                <label>Permissions</label>
+                <table class="table table-sm">
+                    <thead>
+                        <th>Permission</th>
+                        <th></th>
+                    </thead>
+                    <tbody id="permission_table_content">
+                    </tbody>
+                </table>
+                <label>Add Permission</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="permission" placeholder="#">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-primary" type="button" id="add_permission">Add</button>
+                    </div>
+                    <div class="invalid-feedback">
+                        권한 키를 입력해 주세요.
+                    </div>
+                </div>
             </div>
             <hr>
             <div class="card">
@@ -60,11 +95,7 @@
         </div>
     </div>
 </div>
-<div class="overlay">
-    <!-- 알림 창으로 이용 -->
-    <div class="notice-bar" id="notice"></div>
-</div>
-<div class="modal fade" tabindex="-1" id="password_change_modal" aria-labelledby="" aria-hidden="true">
+<div class="modal fade" tabindex="-1" id="password_change_modal" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -75,8 +106,8 @@
             </div>
             <div class="modal-body">
                 <div class="form-group mb-3">
-                    <label for="password">Current Password</label>
-                    <input type="password" class="form-control" id="current_password">
+                    <label for="password">Admin Password</label>
+                    <input type="password" class="form-control" id="admin_password">
                     <div class="invalid-feedback">
                         비밀번호를 입력해주세요.
                     </div>
@@ -101,8 +132,7 @@
             </div>
         </div>
     </div>
-</div>
-<div class="modal fade" tabindex="-1" id="delete_account_modal" aria-hidden="true">
+</div><div class="modal fade" tabindex="-1" id="delete_account_modal" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -130,23 +160,76 @@
         </div>
     </div>
 </div>
+<div class="overlay">
+    <div class="notice-bar" id="notice"></div>
+</div>
 <script src="{{ url_for('static', filename='utils.js') }}"></script>
 <script src="{{ url_for('static', filename='sha256.min.js') }}"></script>
 <script src="{{ url_for('static', filename='jsencrypt.min.js') }}"></script>
 <script>
+    const user_uid = "{{ target_user.uid }}";
     const message_table = {
         400: "유효하지 않은 요청입니다. 다시 시도해주세요.",
         401: "현재 로그인이 유효하지 않습니다. 다시 로그인해주세요.",
-        403: "비밀번호가 일치하지 않습니다.",
+        403: "권한이 없습니다.",
+        404: "존재하지 않는 권한 키 입니다.",
         500: "서버 내부 오류입니다. 다시 시도해주세요."
     };
 
+    let notify = function(message, status) {    
+        ksu_goodplace.notify("warning", message + " - " + message_table[status], 3000);
+    };
+
+    function reloadPermissions() {
+        // Load user permission
+        $.getJSON("/api/users/" + user_uid + "/permissions", function(data) {
+            let content = $("#permission_table_content");
+
+            // Reset table content.
+            content.children().remove();
+
+            for (let perm of data["permissions"]) {
+                content.append(
+                    $("<tr>").append(
+                        $("<td>").text(perm),
+                        $("<td>").append(
+                            $("<a>").data("permission", perm).attr("href", "#").append(
+                                $("<img>").attr("src", "{{ url_for('static', filename='images/trash.svg') }}")
+                            )
+                        )
+                    )
+                );
+            }
+        }).fail(function(xhr) {
+            notify("권한 로드에 실패하였습니다.", xhr.status);
+        }).done(function() {
+            $("#permission_table_content a").on("click", function(event) {
+                event.preventDefault();
+
+                const perm = $(this).data("permission");
+
+                $.ajax("/api/users/" + user_uid + "/permissions", {
+                    method: "DELETE",
+                    dataType: "JSON",
+                    contentType: "application/json",
+                    data: JSON.stringify({ "permission": perm }),
+                    success: function(data, status, xhr) {
+                        ksu_goodplace.notify("success", "권한을 제거하였습니다.", 3000);
+                        reloadPermissions();
+                    },
+                    error: function(xhr) { notify("권한 제거에 실패하였습니다.", xhr.status); }
+                });
+            });
+        });
+    }
+
+    // 화면 로드 완료시 권한 목록 로드.
+    $(function() {
+        reloadPermissions();
+    });
+
     // 프로파일 사진 업로드 이벤트 처리
     $("#upload_profile_image").on("click", function() {
-        let error_handler = function() {
-            ksu_goodplace.notify("warning", "프로필 사진 업로드에 실패했습니다 - " + message_table[xhr.status], 3000);
-        };
-
         var data = new FormData();
         let file = $("#profile_image")[0].files[0];
 
@@ -167,8 +250,6 @@
             contentType: false,
             processData: false,
             success: function(data) {
-                let user_uid = ksu_goodplace.get_cookie("__USER_ID");
-
                 // 성공했으면 유저 프로파일 등록
                 $.ajax({
                     url: "/api/users/" + user_uid,
@@ -179,20 +260,16 @@
                         ksu_goodplace.notify("success", "프로필 사진 업로드에 성공했습니다.", 3000);
                         $("#profile").attr("src", data["url"]);
                     },
-                    fail: error_handler
+                    fail: function(xhr) { notify("프로필 사진 업로드에 실패했습니다.", xhr.status); }
                 });
             },
-            fail: error_handler
+            fail: function(xhr) { notify("프로필 사진 업로드에 실패했습니다.", xhr.status); }
         });
     });
 
-    // 별명 수정시 이벤트 처리
+    // 별명 수정시 이벤트 처리.
     $("#apply_nickname").on("click", function() {
-        let error_handler = function() {
-            ksu_goodplace.notify("warning", "닉네임 변경에 실패했습니다 - " + message_table[xhr.status], 3000);
-        };
         let nickname = $("#nickname").val();
-        let user_uid = ksu_goodplace.get_cookie("__USER_ID");
 
         // Reset invalid feedback.
         $("#nickname").removeClass("is-invalid");
@@ -211,32 +288,30 @@
             success: function() {
                 ksu_goodplace.notify("success", "닉네임 변경에 성공했습니다.", 3000);
             },
-            fail: error_handler
+            fail: function(xhr) { notify("닉네임 변경에 실패하였습니다.", xhr.status); }
         });
     });
 
-    // 새로운 비밀번호 입력할 때 같은지 확인.
-    $("#new_password_check").on("change", function() {
-        let pw = $("#new_password").val();
-        let pw_check = $("#new_password_check").val();
-
-        (pw === pw_check) ? $("#new_password_check").removeClass("is-invalid") : $("#new_password_check").addClass("is-invalid");
-    
+    $("#password_change_modal").on("hidden.bs.modal", function() {
+        // Clear inputs
+        $("#admin_password").val("");
+        $("#new_password").val("");
+        $("#new_password_check").val("");
     });
 
     // 비밀번호 변경 버튼 누를 때 이벤트 처리.
     $("#change_password").on("click", function() {
-        let current_pw = $("#current_password").val();
+        let admin_pw = $("#admin_password").val();
         let new_pw = $("#new_password").val();
         let new_pw_check = $("#new_password_check").val();
 
         // Reset invalid feedback.
-        $("#current_password").removeClass("is-invalid");
+        $("#admin_password").removeClass("is-invalid");
         $("#new_password").removeClass("is-invalid");
         $("#new_password_check").removeClass("is-invalid");
 
-        if (current_pw.length == 0) {
-            $("#current_password").addClass("is-invalid");
+        if (admin_pw.length == 0) {
+            $("#admin_password").addClass("is-invalid");
             return;
         }
 
@@ -260,7 +335,7 @@
         $.getJSON("/api/auth/request_token", { request_id: request_id }, function(data) {
             let request_data = {
                 "request_id": request_id,
-                "old_pw": sha256(current_pw),
+                "admin_pw": sha256(admin_pw),
                 "new_pw": sha256(new_pw)
             };
 
@@ -269,7 +344,7 @@
 
             let encrypted_data = crypt.encrypt(JSON.stringify(request_data));
 
-            $.ajax("/api/auth/update_password", {
+            $.ajax("/api/auth/update_password/" + user_uid, {
                 method: "POST",
                 dataType: "JSON",
                 contentType: "application/json",
@@ -283,9 +358,32 @@
         }).fail(error_handler);
     });
 
-    // 회원 탈퇴 버튼을 누를 시 이벤트 처리.
+    $("#add_permission").on("click", function() {
+        let perm = $("#permission").val();
+
+        // Reset invalid feedback.
+        $("#permission").removeClass("is-invalid");
+
+        if (perm.length > 0) {
+            $.ajax("/api/users/" + user_uid + "/permissions", {
+                method: "PUT",
+                dataType: "JSON",
+                contentType: "application/json",
+                data: JSON.stringify({ "permission": perm }),
+                success: function(data, status, xhr) {
+                    ksu_goodplace.notify("success", "권한을 추가하였습니다.", 3000);
+                    $("#permission").val(""); // clear input
+                    reloadPermissions();
+                },
+                error: function(xhr) { notify("권한 추가에 실패하였습니다.", xhr.status); }
+            });
+        }
+        else {
+            $("#permission").addClass("is-invalid");
+        }
+    });
+
     $("#delete_account").on("click", function() {
-        let user_uid = ksu_goodplace.get_cookie("__USER_ID");
         let pw = $("#verify_password").val();
 
         // Reset invalid feedback.
@@ -296,10 +394,13 @@
             $("#verify_password").addClass("is-invalid");
         }
         else {
-            let error_handler = function(xhr, status) {
-                ksu_goodplace.notify("warning", "회원탈퇴에 실패했습니다 - " + message_table[xhr.status], 3000);
+            let error_handler = function(xhr) {
+                notify("회원탈퇴에 실패했습니다.", xhr.status);
+
+                $("#verify_password").val("");
                 $("#delete_account_modal").modal("hide");
             };
+
             let request_id = ksu_goodplace.generate_id();
 
             $.getJSON("/api/auth/request_token", { request_id: request_id }, function(data) {
@@ -320,7 +421,7 @@
                     data: JSON.stringify({ "data": encrypted_data, "token": data["token"] }),
                     success: function(data, status, xhr) {
                         alert("회원 탈퇴가 완료되었습니다.");
-                        window.location.assign("{{ url_for('views.index') }}");
+                        window.location.assign("{{ url_for('views.admin') }}");
                     },
                     error: error_handler
                 });

@@ -1,3 +1,4 @@
+from flask import escape, Markup
 from flask_restx import Namespace, Resource
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
@@ -49,7 +50,8 @@ class PostsAPI(Resource):
                     "latitude": post.location.lat,
                     "longitude": post.location.lng
                 },
-                'picture_url': post.picture_url
+                'picture_url': post.picture_url,
+                'category': post.category
             } for post in posts ]
         }
 
@@ -70,6 +72,8 @@ class PostsAPI(Resource):
             - address: 게시물 주소.
             - location: 게시물 지리적 주소.
             - image_url: 게시물 사진 URL.
+            - content:
+            - category:
             
         returns:
             - message: 상태 메세지.
@@ -77,10 +81,15 @@ class PostsAPI(Resource):
         """
         from . import resources_api
 
-        name = utils.get_post_argument('name')
-        addr = utils.get_post_argument('address')
-        location_str: str = utils.get_post_argument('location')
+        name = utils.get_post_argument('name', is_required=True)
+        addr = utils.get_post_argument('address', is_required=True)
+        location_str: str = utils.get_post_argument('location', is_required=True)
+        category = utils.get_post_argument('category', is_required=True)
         image_url = utils.get_post_argument('image_url')
+        raw_content = utils.get_post_argument('content')
+
+        # Replace new-lines to <br> tags.
+        content = str(escape(raw_content).replace('\n', Markup('<br>')))
 
         if image_url is not None and not resources_api.is_valid_url(image_url):
             raise BadRequest('Invalid image url.')
@@ -95,7 +104,7 @@ class PostsAPI(Resource):
         except TypeError:
             raise BadRequest('Invalid location type.')
 
-        Post.create_post(user, name, addr, location, image_url)
+        Post.create_post(user, name, addr, location, image_url, content, category)
 
         return { 'message': 'Success' }
 
@@ -136,7 +145,10 @@ class SearchAPI(Resource):
             raise BadRequest("Omitted required data 'query' or 'coord'.")
         elif query is not None:
             # Query
-            results = Post.query_by_name(query)
+            if len(query) > 1 and query.startswith('#'):            
+                results = Post.query_by_category(query[1:])
+            else:
+                results = Post.query_by_name(query)
         else:
             # Coord
             coords = coord.split(',')
@@ -169,8 +181,35 @@ class SearchAPI(Resource):
                     "latitude": post.location.lat,
                     "longitude": post.location.lng
                 },
-                'picture_url': post.picture_url
+                'picture_url': post.picture_url,
+                'category': post.category
             } for post in results ]
+        }
+
+
+@api.route('/recommends')
+class GetRecommendsAPI(Resource):
+    def get(self):
+        start = utils.get_request_argument('start', default=0, type=int)
+        count = utils.get_request_argument('count', default=20, type=int)
+
+        posts = Post.get_posts_by_recommends(start, count)
+
+        return {
+            'message': 'Success',
+            'start': start,
+            'count': len(posts),
+            'posts': [ {
+                'id': post.id,
+                'name': post.name,
+                'address': post.address,
+                'location': {
+                    "latitude": post.location.lat,
+                    "longitude": post.location.lng
+                },
+                'picture_url': post.picture_url,
+                'category': post.category
+            } for post in posts ]
         }
 
 
@@ -197,6 +236,8 @@ class PostAPI(Resource):
         if post is None:
             raise NotFound('Post ID %d is not found.' % post_id)
 
+        user = User.get_current_user()
+
         return { 
             'message': 'Success',
             'id': post_id,
@@ -206,7 +247,12 @@ class PostAPI(Resource):
                 "latitude": post.location.lat,
                 "longitude": post.location.lng
             },
-            'picture_url': post.picture_url
+            'can_edit': (post.writer.uid == user.uid and user.has_permission('user.posts.update')) or user.has_permission('admin.posts.update'),
+            'can_delete': (post.writer.uid == user.uid and user.has_permission('user.posts.delete')) or user.has_permission('admin.posts.delete'),
+            'picture_url': post.picture_url,
+            'content': post.content,
+            'recommend_count': post.get_recommend_count(),
+            'category': post.category
         }
     
 
@@ -238,13 +284,15 @@ class PostAPI(Resource):
         if post is None:
             raise NotFound('Post ID %d is not found.' % post_id)
 
-        if post.writer_uid != user.uid and not user.has_permission('admin.posts.update'):
+        if post.writer.uid != user.uid and not user.has_permission('admin.posts.update'):
             raise BadRequest('Operation not permitted.')
 
-        name = utils.get_post_argument('name', default=None)
-        address = utils.get_post_argument('address', default=None)
-        location_str = utils.get_post_argument('location', default=None)
-        picture_url = utils.get_post_argument('picture_url', default=None)
+        name = utils.get_post_argument('name')
+        address = utils.get_post_argument('address')
+        location_str = utils.get_post_argument('location')
+        picture_url = utils.get_post_argument('picture_url')
+        raw_content = utils.get_post_argument('content')
+        category = utils.get_post_argument('category')
 
         if name is not None:
             post.name = name
@@ -265,6 +313,13 @@ class PostAPI(Resource):
                 raise BadRequest('Invalid picture_url')
             else:
                 post.picture_url = picture_url
+
+        if category is not None:
+            post.category = category
+        
+        if raw_content is not None:        
+            # Replace new-lines to <br> tags.
+            post.content = str(escape(raw_content).replace('\n', Markup('<br>')))
 
         return { 'message': 'Success' }
     
@@ -290,10 +345,36 @@ class PostAPI(Resource):
             raise NotFound('Post ID %d is not found.' % post_id)
 
 
-        if post.writer_uid != user.uid and not user.has_permission('admin.posts.update'):
+        if post.writer.uid != user.uid and not user.has_permission('admin.posts.update'):
             raise BadRequest('Operation not permitted.')
             
         post.delete()
+
+        return { 'message': 'Success' }
+
+
+@api.route('/<int:post_id>/recommends')
+class RecommendsAPI(Resource):
+    @required_login('user.posts')
+    def get(self, user, post_id):
+        post = Post.from_id(post_id)
+
+        if post is None:
+            raise NotFound('Post ID %d is not found.' % post_id)
+
+        return { 'message': 'Success', 'recommended': post.get_recommend(user.uid) }
+
+
+    @required_login('user.posts')
+    def post(self, user, post_id):
+        post = Post.from_id(post_id)
+        recommend = utils.get_post_argument('recommend', is_required=True, type=bool)
+
+        if post is None:
+            raise NotFound('Post ID %d is not found.' % post_id)
+
+
+        post.set_recommend(user.uid, recommend)
 
         return { 'message': 'Success' }
 
@@ -329,6 +410,7 @@ class CommentPublicAPI(Resource):
             raise NotFound('Post ID %d is not found.' % post_id)
 
         comments = post.get_comments(start, count)
+        user = User.get_current_user()
 
         return {
             'message': 'Success',
@@ -336,9 +418,12 @@ class CommentPublicAPI(Resource):
             'count': len(comments),
             'comments': [ {
                 'post_id': post.id,
+                'user_id': c.writer.id,
                 'user_uid': c.writer.uid,
                 'user_nickname': c.writer.nickname,
                 'user_profile': c.writer.profile_url,
+                'can_edit': (c.writer.uid == user.uid and user.has_permission('user.posts.comments.update')) or user.has_permission('admin.posts.comments.update'),
+                'can_delete': (c.writer.uid == user.uid and user.has_permission('user.posts.comments.delete')) or user.has_permission('admin.posts.comments.delete'),
                 'comment_id': c.id,
                 'comment': c.comment 
             } for c in comments ]
@@ -399,12 +484,17 @@ class CommentAuthorizedAPI(Resource):
         if comment is None:
             raise NotFound('Comment ID %d is not found.' % comment_id)
 
+        user = User.get_current_user()
+
         return {
             'message': 'Success',
             'post_id': post.id,
+            'user_id': comment.writer.id,
             'user_uid': comment.writer.uid,
             'user_nickname': comment.writer.nickname,
             'user_profile': comment.writer.profile_url,
+            'can_edit': (post.writer.uid == user.uid and user.has_permission('user.posts.comment.update')) or user.has_permission('admin.posts.comment.update'),
+            'can_delete': (post.writer.uid == user.uid and user.has_permission('user.posts.comment.delete')) or user.has_permission('admin.posts.comments.delete'),
             'comment_id': comment.id,
             'comment': comment.comment 
         }
@@ -464,7 +554,6 @@ class CommentAuthorizedAPI(Resource):
             - message: 상태 메세지.
         """
         post = Post.from_id(post_id)
-        msg = utils.get_post_argument('comment', is_required=True)
 
         if post is None:
             raise NotFound('Post ID %d is not found.' % post_id)

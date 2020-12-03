@@ -2,7 +2,7 @@
 # users_api.py
 # - 유저 관리를 담당하는 API.
 #
-from flask import jsonify
+from flask import current_app, jsonify
 from flask_restx import Resource, Namespace
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
@@ -24,7 +24,7 @@ class UsersAPI(Resource):
         권한 요구: `admin.users`. 권한이 없는 경우 `403 - Forbidden` 반환.
 
         현재 등록된 유저의 목록을 가져옵니다.
-        개인정보 보호를 위해 유저 고유 번호, 닉네임과 프로필사진 URL만 가져옵니다.
+        유저 아이디와 유저 고유 번호, 닉네임, 프로필사진 URL만 가져옵니다.
 
         parameters:
             - [optional]count: 유저의 최대 개수. 기본값: 20
@@ -35,9 +35,10 @@ class UsersAPI(Resource):
             - start: 시작 index.
             - count: `users`의 개수. 인자보다 적게 가져올 수도 있음.
             - users:  게시물 목록.
-                - user_uid: 유저 고유 번호.
-                - user_nickname: 유저의 별명.
-                - user_profile: 유저 프로파일 사진 URL.
+                - id: 유저의 아이디
+                - uid: 유저 고유 번호.
+                - nickname: 유저의 별명.
+                - profile_url: 유저 프로파일 사진 URL.
         """
         start = utils.get_request_argument('start', default=0, type=int)
         count = utils.get_request_argument('count', default=20, type=int)
@@ -53,12 +54,13 @@ class UserAPI(Resource):
         GET /api/users/<uid>
 
         지정된 유저 고유 번호로 유저의 정보를 가져옵니다.
-        개인정보 보호를 위해 유저 고유 번호, 닉네임과 프로필사진 URL만 가져옵니다.
+        유저 아이디, 유저 고유 번호, 닉네임과 프로필사진 URL만 가져옵니다.
 
         없는 유저 고유 번호인 경우 `404 - NotFound`가 반환됩니다.
 
         returns:
             - message: 상태 메세지.
+            - user_id: 유저 아이디.
             - user_uid: 유저 고유 번호.
             - user_nickname: 유저의 별명.
             - user_profile: 유저 프로파일 사진 URL.
@@ -68,7 +70,7 @@ class UserAPI(Resource):
         if user is None:
             raise NotFound('UID {0} is not exist.'.format(uid))
         else:
-            return jsonify(message='Success', user_uid=uid, user_nickname=user.nickname, user_profile=user.profile_url)
+            return jsonify(message='Success', user_id=user.id, user_uid=uid, user_nickname=user.nickname, user_profile=user.profile_url)
 
 
     @required_login
@@ -103,7 +105,7 @@ class UserAPI(Resource):
 
         target_user = User.from_uid(uid)
 
-        if target_user is None:
+        if target_user.is_annonymous():
             raise NotFound('UID {0} is not exist.'.format(uid))
         elif target_user.id != user.id and not user.has_permission('admin.users.update'):
             raise Forbidden('Operation not permitted.')
@@ -133,23 +135,49 @@ class UserAPI(Resource):
         본인 계정 또는 권한 요구: `admin.users.delete`. 권한이 없는 경우 `403 - Forbidden` 반환.
 
         지정된 유저 고유 번호로 유저를 삭제합니다.
+        유저를 삭제할 때 유저 삭제 요청을 한 계정에 대한 암호를 요구합니다.
+        먼저 `/api/auth/request_token` 을 통해 인증토큰을 요청 한 후
+        데이터를 암호화 하여 이 요청을 보내야 합니다.
+
         로그인한 유저와 지정된 유저 고유 번호가 일치할 경우 권한을 요구하지 않습니다.
         그 이외의 경우에는 상기한 권한이 요구됩니다.
 
         없는 유저 고유 번호인 경우 `404 - NotFound`가 반환됩니다.
         
+        requests:
+            - token: `/api/auth/request_token` 메서드에서 발급받은 `token`.
+            - data: 회원 탈퇴 데이터.
+                - pw: 삭제 요청을 한 계정의 비밀번호.
+
         returns:
             - message: 상태 메세지.
         """
-        target_user = User.from_uid(uid)
+        encrypted_data = utils.get_post_argument('data', is_required=True)
+        encrypted_token = utils.get_post_argument('token', is_required=True)
 
-        if target_user is None:
-            raise NotFound('UID {0} is not exist.'.format(uid))
-        elif target_user.id != user.id and not user.has_permission('admin.users.delete'):
-            raise Forbidden('Operation not permitted.')
-        else:
-            target_user.delete()
-            return jsonify(message='Success')
+        try:
+            data = utils.verify_and_get_data(encrypted_data, encrypted_token, current_app.config['ENCRYPT_SECRET_KEY'])
+            
+            if not user.check_password(data['pw']):
+                raise Forbidden('User/Password mismatch.')
+
+            target_user = User.from_uid(uid)
+
+            if target_user is None:
+                raise NotFound('UID {0} is not exist.'.format(uid))
+
+            elif target_user.id != user.id and not user.has_permission('admin.users.delete'):
+                raise Forbidden('Operation not permitted.')
+
+            else:
+                target_user.delete()
+                return jsonify(message='Success')
+
+        except (utils.InvalidToken, utils.CorruptedData) as e:
+            raise BadRequest(str(e))
+
+        except KeyError:
+            raise BadRequest('Omitted required data.')
 
 
 @api.route('/<uid>/permissions')
@@ -235,7 +263,7 @@ class PermissionsAPI(Resource):
             - message: 상태 메세지.
         """
         target_user = User.from_uid(uid)
-        perm = utils.get_request_argument('permission')
+        perm = utils.get_post_argument('permission')
 
         if target_user is None:
             raise NotFound('UID {0} is not exist.'.format(uid))

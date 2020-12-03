@@ -8,15 +8,32 @@
 <div class="container" style="margin-top: 120px;">
     <div class="row">
         <div class="col-md-6">
-            <div class="card" id="post_table">
+            <div class="card" id="user_table">
                 <div class="card-header">
                     <h2>Users</h2>
                 </div>
                 <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Nickname</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="user_table_content">
 
-                </div>
-                <div class="card-footer">
-                    <p>Total user count: 0</p>
+                        </tbody>
+                    </table>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" id="user_page_prev">
+                            <a class="page-link" href="#">&laquo;</a>
+                        </li>
+                        <li class="page-item"><a class="page-link" id="user_page_count">#</a></li>
+                        <li class="page-item" id="user_page_next">
+                            <a class="page-link" href="#">&raquo;</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -26,16 +43,158 @@
                     <h2>Posts</h2>
                 </div>
                 <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="post_table_content">
 
-                </div>
-                <div class="card-footer">
-                    <p>Total posts: 0</p>
+                        </tbody>
+                    </table>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" id="post_page_prev">
+                            <a class="page-link" href="#">&laquo;</a>
+                        </li>
+                        <li class="page-item"><a class="page-link" id="post_page_count">#</a></li>
+                        <li class="page-item" id="post_page_next">
+                            <a class="page-link" href="#">&raquo;</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
 <div class="overlay">
-    <div class="right-bottom" id="notice"></div>
+    <div class="notice-bar" id="notice"></div>
 </div>
+<script src="{{ url_for('static', filename='utils.js') }}"></script>
+<script>
+    const MAX_COUNT_PER_PAGE = 10;
+
+    let error_handler = function(message, status) {
+        let msg_table = {
+            400: "유효하지 않은 요청입니다. 다시 시도해주세요.",
+            401: "현재 로그인이 유효하지 않습니다. 다시 로그인해주세요.",
+            403: "권한이 없습니다.",
+            500: "서버 내부 오류입니다. 다시 시도해주세요."
+        };
+    
+        ksu_goodplace.notify("warning", message + " - " + msg_table[status]);
+    };
+
+    $(function() {
+        loadUsers();
+        loadPosts();
+    });
+
+    function loadUsers(index = 1) {
+        $.getJSON("/api/users", { start: (index - 1) * MAX_COUNT_PER_PAGE, count: MAX_COUNT_PER_PAGE }, function(data) {
+            let content = $("#user_table_content");
+
+            content.children().remove();
+
+            for (let user of data.users) {
+                let body = $("<tr>");
+                
+                body.append([
+                    $("<td>").text(user.id),
+                    $("<td>").text(user.nickname),
+                    $("<td>").append(
+                        $("<a>")
+                            .attr("href", "/admin/users/" + user.uid)
+                            .append(
+                            $("<img>").attr("src", "{{ url_for('static', filename='images/pencil.svg') }}")
+                        )
+                    )
+                ]);
+
+                content.append(body);
+            }
+
+            let prev_enabled = (index > 1);
+            let next_enabled = (data.count == MAX_COUNT_PER_PAGE);
+
+            prev_enabled ? $("#user_page_prev").removeClass("disabled") : $("#user_page_prev").addClass("disabled");
+            next_enabled ? $("#user_page_next").removeClass("disabled") : $("#user_page_next").addClass("disabled");
+
+            $("#user_page_count").text(index);
+
+            $("#user_table_content").data("index", index);
+        }).fail(function(xhr) {
+            error_handler("유저 정보 로드에 실패하였습니다.", xhr.status);
+        });
+    }
+
+    function loadPosts(index = 1) {
+        $.getJSON("/api/posts", { start: (index - 1) * MAX_COUNT_PER_PAGE, count: MAX_COUNT_PER_PAGE }, function(data) {
+            let content = $("#post_table_content");
+
+            content.children().remove();
+
+            if (data.count > 0) {
+                for (let post of data.posts) {
+                    let body = $("<tr>");
+                
+                    body.append([
+                        $("<td>").text(post.name),
+                        $("<td>").append(
+                            $("<a>")
+                                .attr("href", "/admin/posts/" + post.id)
+                                .append(
+                                $("<img>").attr("src", "{{ url_for('static', filename='images/pencil.svg') }}")
+                            )
+                        )
+                    ]);
+
+                    content.append(body);
+                }
+            }
+            else {
+                let body = $("<tr>");
+                
+                body.append([
+                    $("<td>").text("No post.")
+                ]);
+
+                content.append(body);
+            }
+
+            let prev_enabled = (index > 1);
+            let next_enabled = (data.count == MAX_COUNT_PER_PAGE);
+
+            prev_enabled ? $("#post_page_prev").removeClass("disabled") : $("#post_page_prev").addClass("disabled");
+            next_enabled ? $("#post_page_next").removeClass("disabled") : $("#post_page_next").addClass("disabled");
+
+            $("#post_page_count").text(index);
+
+            $("#post_table_content").data("index", index);
+        }).fail(function(xhr) {
+            error_handler("게시글 정보 로드에 실패하였습니다.", xhr.status);
+        });
+    }
+
+    $("#user_page_prev a").on("click", function() {
+        let index = $("#user_table_content").data("index");
+        loadUsers(--index);
+    });
+
+    $("#user_page_next a").on("click", function() {
+        let index = $("#user_table_content").data("index");
+        loadUsers(++index);
+    });
+
+    $("#post_page_prev a").on("click", function() {
+        let index = $("#post_table_content").data("index");
+        loadPosts(--index);
+    });
+
+    $("#post_page_next a").on("click", function() {
+        let index = $("#post_table_content").data("index");
+        loadPosts(++index);
+    });
+</script>
 {% endblock %}

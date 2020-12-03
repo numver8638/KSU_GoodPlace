@@ -3,8 +3,9 @@
 # - 웹 연동 코드. 대부분의 연산은 api에서 이루어지므로 여기서는 html 렌더링만 담당.
 #
 from flask import Blueprint, render_template, url_for, redirect, request, make_response
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, NotFound
 from .user import required_login, User
+from .post import Post
 
 bp = Blueprint('views', __name__, url_prefix='/')
 
@@ -62,3 +63,25 @@ def user(user):
 @required_login('admin')
 def admin(user):
     return render_template('admin.html', user=user)
+
+
+@bp.route('/admin/users/<uid>')
+@required_login('admin.users')
+def admin_users(user, uid):
+    target_user = User.from_uid(uid)
+
+    if target_user.is_annonymous():
+        raise NotFound()
+    else:
+        return render_template('admin.user.html', user=user, target_user=target_user)
+
+
+@bp.route('/admin/posts/<id>')
+@required_login('admin.posts')
+def admin_posts(user, id):
+    post = Post.from_id(id)
+
+    if post is None:
+        raise NotFound()
+    else:
+        return render_template('admin.post.html', user=user, post=post, writer=post.writer)

@@ -1,7 +1,7 @@
 from flask import url_for
 
 from . import database
-from .api import resources_api
+from .user import User
 
 class Location:
     def __init__(self, lat, lng):
@@ -66,7 +66,7 @@ class Post:
     게시글을 나타내는 클래스.
     """
     def __sync_data(self):
-        database.update_post(self.__id, self.__name, self.__addr, self.__loc, self.__url)
+        database.update_post(self.__id, self.__name, self.__addr, self.__loc, self.__url, self.__content, self.__category)
 
 
     def __init__(self, data):
@@ -76,6 +76,8 @@ class Post:
         self.__addr = data['post_address']
         self.__loc = Location(data['post_lat'], data['post_lng'])
         self.__url = data['post_image_url']
+        self.__content = data['post_content']
+        self.__category = data['post_category']
 
 
     @property
@@ -84,8 +86,8 @@ class Post:
 
 
     @property
-    def writer_uid(self):
-        return self.__writer_id
+    def writer(self):
+        return User.from_uid(self.__writer_id)
 
     
     @property
@@ -131,12 +133,48 @@ class Post:
 
     @picture_url.setter
     def picture_url(self, value):
+        from .api import resources_api
+        
         if value is None or not resources_api.is_valid_url(value):
-            value = url_for('static', filename='default_image.png')
+            value = url_for('static', filename='images/default_post.svg')
         
         self.__url = value
 
         self.__sync_data()
+    
+
+    @property
+    def content(self):
+        return self.__content
+
+    
+    @content.setter
+    def content(self, value):
+        self.__content = value
+
+        self.__sync_data()
+
+    
+    @property
+    def category(self):
+        return self.__category
+
+    
+    @category.setter
+    def category(self, value):
+        self.__category = value
+
+        self.__sync_data()
+
+    def get_recommend(self, user_uid):
+        return database.is_user_recommended(self.id, user_uid)
+
+
+    def set_recommend(self, user_uid, recommend):
+        if recommend:
+            database.add_recommend(self.id, user_uid)
+        else:
+            database.remove_recommend(self.id, user_uid)
 
     
     def write_comment(self, user, comment):
@@ -151,6 +189,14 @@ class Post:
         data = database.get_comment(comment_id)
 
         return Comment(data) if data is not None else None
+    
+
+    def get_recommend_count(self):
+        return database.get_recommend_count(self.id)
+    
+
+    def delete(self):
+        database.delete_post(self.id)
 
 
     @staticmethod
@@ -164,6 +210,13 @@ class Post:
         name = name.strip()
 
         return [ Post(data) for data in database.find_posts_by_name(name) ]
+    
+
+    @staticmethod
+    def query_by_category(category: str):
+        category = category.strip()
+
+        return [ Post(data) for data in database.find_posts_by_category(category) ]
 
 
     @staticmethod
@@ -174,14 +227,21 @@ class Post:
     @staticmethod
     def get_posts(start, count):
         return [ Post(data) for data in database.get_posts(start, count) ]
+    
+
+    @staticmethod
+    def get_posts_by_recommends(start, count):
+        return [ Post(data) for data in database.get_posts_by_recommends(start, count) ]
 
 
     @staticmethod
-    def create_post(user, name, addr, loc, picture_url):
+    def create_post(user, name, addr, loc, picture_url, content, category):
+        from .api import resources_api
+        
         if picture_url is None or not resources_api.is_valid_url(picture_url):
-            picture_url = url_for('static', filename='default_image.png')
+            picture_url = url_for('static', filename='images/default_post.svg')
 
-        database.create_post(user.uid, name, addr, loc, picture_url)
+        database.create_post(user.uid, name, addr, loc, picture_url, content, category)
 
 
 class CommentWriter:
@@ -217,7 +277,7 @@ class Comment:
 
 
     def __init__(self, data):
-        self.__writer = CommentWriter(data['user_uid'], data['user_nickname'], data['user_profile'])
+        self.__writer = data['user_uid']
         self.__id = data['comment_id']
         self.__comment = data['comment']
     
@@ -236,7 +296,7 @@ class Comment:
 
     @property
     def writer(self):
-        return self.__writer
+        return User.from_uid(self.__writer)
     
 
     @property

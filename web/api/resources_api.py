@@ -5,7 +5,7 @@
 import os
 
 from Crypto import Random
-from flask import request, url_for, current_app, send_file
+from flask import request, url_for, current_app, send_file, jsonify
 from flask_restx import Namespace, Resource
 from werkzeug.exceptions import BadRequest, NotFound
 from werkzeug.utils import secure_filename
@@ -69,7 +69,7 @@ class ResourcesAPI(Resource):
 @api.route('/upload')
 class UploadAPI(Resource):
     @required_login
-    def post(self):
+    def post(self, user):
         """
         `POST /api/resources/upload`
 
@@ -91,10 +91,10 @@ class UploadAPI(Resource):
         if file.filename == '':
             raise BadRequest('File not uploaded.')
 
-        if not allowed_file(file):
+        if not allowed_file(file.filename):
             raise BadRequest('Not allowed file type.')
 
         filename = _generate_random_name()
         file.save(os.path.join(current_app.config['UPLOAD_ROOT'], filename))
 
-        return jsonify(message='Success', url=url_for('api.resources', filename=filename))
+        return jsonify(message='Success', url=url_for('api.resources_resources_api', resource_id=filename))
