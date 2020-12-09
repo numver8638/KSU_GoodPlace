@@ -280,17 +280,26 @@
         loadDefaultPosts();
     });
 
-    function loadDefaultPosts() {
+    function loadDefaultPosts(cont = false) {
         // Reset invalid feedback
         $("#search_input").removeClass("is-invalid");
 
-        // Reset search content
-        $("#search_content").children().remove();
+        let search_content = $("#search_content");
+
+        if (cont) {
+            search_content.children().last().remove();    
+        }
+        else {
+            // Reset search content
+            search_content.children().remove();
+        }
 
         // Reset markers
         clearMarker();
 
-        $.getJSON("/api/posts", function(data) {
+        let start = search_content.children().length;
+
+        $.getJSON("/api/posts", { start: start, count: 20 }, function(data) {
             for (let post of data.posts) {
                 var body = $(search_body_tempate);
 
@@ -305,7 +314,15 @@
             }
 
             enableAll();
-        }).fail(function(xhr) { ksu_goodplace.notify("warning", "게시물을 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+        }).fail(
+            function(xhr) { ksu_goodplace.notify("warning", "게시물을 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); }
+        ).done(function() {
+            let button = $(`<div class="d-flex justify-content-center"><button class="btn btn-outline-primary" type="button">더 보기</button></div>`);
+
+            button.on("click", function(e) { loadDefaultPosts(true); });
+
+            search_content.append(button);
+        });
     }
 
     // 검색 창에서 엔터 누를 시
