@@ -294,7 +294,7 @@ def get_post(post_id):
 
 
 def get_posts(start, count):
-    QUERY = "SELECT * FROM PostTable LIMIT %s,%s;"
+    QUERY = "SELECT * FROM PostTable ORDER BY PostName LIMIT %s,%s;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, (start, count))
@@ -332,7 +332,7 @@ def get_posts_by_recommends(start, count):
 
 
 def find_posts_by_category(category):
-    QUERY = "SELECT * FROM PostTable WHERE PostCategory LIKE %s;"
+    QUERY = "SELECT * FROM PostTable WHERE PostCategory LIKE %s ORDER BY PostName ASC;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, "%" + category + "%")
@@ -352,7 +352,7 @@ def find_posts_by_category(category):
 
 
 def find_posts_by_name(name):
-    QUERY = "SELECT * FROM PostTable WHERE PostName LIKE %s;"
+    QUERY = "SELECT * FROM PostTable WHERE PostName LIKE %s ORDER BY PostName ASC;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, "%" + name + "%")
@@ -371,7 +371,7 @@ def find_posts_by_name(name):
 
 
 def find_posts_by_location(begin, end):
-    QUERY = "SELECT * FROM PostTable WHERE PostLocationLat BETWEEN %s AND %s AND PostLocationLng BETWEEN %s AND %s;"
+    QUERY = "SELECT * FROM PostTable WHERE PostLocationLat BETWEEN %s AND %s AND PostLocationLng BETWEEN %s AND %s ORDER BY PostName ASC;"
 
     with get_cursor() as cursor:
         cursor.execute(QUERY, (end.lat, begin.lat, end.lng, begin.lng))

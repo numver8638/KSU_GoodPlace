@@ -276,7 +276,37 @@
             center: new naver.maps.LatLng(CAMPUS_LAT, CAMPUS_LNG),
             zoom: 17
         });
+
+        loadDefaultPosts();
     });
+
+    function loadDefaultPosts() {
+        // Reset invalid feedback
+        $("#search_input").removeClass("is-invalid");
+
+        // Reset search content
+        $("#search_content").children().remove();
+
+        // Reset markers
+        clearMarker();
+
+        $.getJSON("/api/posts", function(data) {
+            for (let post of data.posts) {
+                var body = $(search_body_tempate);
+
+                body.find(".card-title").append(post.name);
+                body.find(".card-subtitle").append(post.address);
+                body.attr("data-post-id", post.id);
+                body.on("click", function() { loadPost(post.id); });
+
+                addMarker(post.id, { lat: post.location.latitude, lng: post.location.longitude });
+
+                $("#search_content").append(body);
+            }
+
+            enableAll();
+        }).fail(function(xhr) { ksu_goodplace.notify("warning", "게시물을 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
+    }
 
     // 검색 창에서 엔터 누를 시
     $("#search_text").on("keypress", function(e) {
@@ -467,7 +497,14 @@
         }).fail(function(xhr) { ksu_goodplace.notify("warning", "게시물 정보를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
     }
 
-    $("#search_tab").on("shown.bs.tab", function() { enableAll(); });
+    $("#search_tab").on("shown.bs.tab", function() {
+        if ($("#search_text").val().length > 0) {
+            $("#search_button").click();
+        }
+        else {
+            loadDefaultPosts();
+        }
+    });
 
     // 검색 버튼 클릭시
     $("#search_button").on("click", function() {
@@ -507,7 +544,7 @@
             }).fail(function(xhr) { ksu_goodplace.notify("warning", "검색 결과를 가져오는데에 실패했습니다. - " + message_table[xhr.status], 3000); });
         }
         else {
-            $("#search_input").addClass("is-invalid");
+            loadDefaultPosts();
         }
     });
 
