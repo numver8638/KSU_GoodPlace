@@ -307,14 +307,13 @@
         for (let key in marker_list) {
             marker_list[key].setMap(null);
         }
+        marker_list = {};
     }
 
     function disableAll() {
         for (let key in marker_list) {
             marker_list[key].setMap(null);
         }
-
-        marker_list = {};
     }
 
     // 댓글 로드하는 함수.
